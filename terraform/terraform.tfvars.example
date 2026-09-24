@@ -1,0 +1,13 @@
+kubeconfig_path          = "~/.kube/config"
+namespace                = "openmetadata"
+storage_class_name       = "local-path"
+
+postgresql_chart_version = "18.11.6"
+postgresql_database      = "openmetadata_db"
+postgresql_username      = "openmetadata_user"
+postgresql_password      = "openmetadata_password"
+
+opensearch_chart_version = "3.8.0"
+opensearch_heap_size     = "1024m"
+
+openmetadata_chart_version = "2.0.2"

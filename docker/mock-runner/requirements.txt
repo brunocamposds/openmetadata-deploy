@@ -1,0 +1,12 @@
+# OpenMetadata Client & Ingestion SDK
+openmetadata-ingestion>=1.5.0
+
+# Contract & Schema Specifications (ODCS / YAML)
+pyyaml>=6.0.1
+pydantic>=2.0.0
+jsonschema>=4.20.0
+
+# HTTP & Utilities
+requests>=2.31.0
+faker>=24.0.0
+python-dotenv>=1.0.0

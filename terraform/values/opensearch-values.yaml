@@ -1,0 +1,29 @@
+clusterName: opensearch-cluster
+nodeGroup: single-node
+singleNode: true
+replicas: 1
+
+fullnameOverride: opensearch
+
+opensearchJavaOpts: "-Xmx1024m -Xms1024m"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 1024Mi
+  limits:
+    cpu: 1500m
+    memory: 2048Mi
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 10Gi
+
+config:
+  opensearch.yml: |
+    plugins.security.disabled: true
+    discovery.type: single-node
+
+securityConfig:
+  enabled: false

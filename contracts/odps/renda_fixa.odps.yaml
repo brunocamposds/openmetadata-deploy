@@ -1,0 +1,75 @@
+# Open Data Product Standard (ODPS) v1.0.0
+# Especificação do Produto de Dados: Renda Fixa Consolidada
+apiVersion: v1.0.0
+kind: DataProduct
+id: urn:dataproduct:servicos-financeiros:renda-fixa-consolidada
+name: RendaFixaConsolidada
+displayName: "Renda Fixa Consolidada"
+version: 1.0.0
+status: active
+
+info:
+  title: "Data Product de Renda Fixa Consolidada (CDB & CRA)"
+  description: >-
+    Produto de dados corporativo consolidando as posições de custódia e operações
+    de Renda Fixa originadas nos sistemas legados CDB1 (Mainframe DB2) e CRA1 (SQL Server),
+    disponibilizado analiticamente no Azure Databricks (Unity Catalog) e operacionalmente
+    via MongoDB para consumo em tempo real pelo canal Mobile.
+  domain: "ServicosFinanceiros"
+  subdomain: "RendaFixa"
+  owner: "squad-renda-fixa"
+  contact:
+    team: "Squad Renda Fixa & Investimentos"
+    slack: "#squad-investimentos-renda-fixa"
+    email: "rendafixa-data@empresa.com"
+  lifecycle:
+    releaseDate: "2026-09-23"
+    environment: "production"
+
+governance:
+  dataClassification: "Confidential"
+  compliance:
+    - LGPD
+    - BACEN-4658
+  sla:
+    availability: "99.9%"
+    freshness: "D+0 07:00 BRT"
+    supportHours: "8x5 Business Hours"
+
+inputPorts:
+  - id: "port-in-cdb1"
+    name: "CDB1 Silver Source Aligned"
+    type: "table"
+    fqn: "azure_databricks_uc.finance_catalog.silver_cdb1.posicao_cdb"
+    sourceSystem: "Mainframe DB2 (CDB1_PROD.OPER.TB_CDB_OPERACAO)"
+    description: "Tabela silver com posições padronizadas de CDB originadas do Mainframe."
+
+  - id: "port-in-cra1"
+    name: "CRA1 Silver Source Aligned"
+    type: "table"
+    fqn: "azure_databricks_uc.finance_catalog.silver_cra1.posicao_cra"
+    sourceSystem: "SQL Server (CRA1_PROD.dbo.tb_cra_operacao)"
+    description: "Tabela silver com posições padronizadas de CRA originadas do SQL Server."
+
+outputPorts:
+  - id: "port-out-sql-analytical"
+    name: "SQL Analytical Output Port"
+    type: "table"
+    protocol: "Databricks SQL / Unity Catalog"
+    fqn: "azure_databricks_uc.finance_catalog.silver_renda_fixa.posicao_consolidada"
+    description: "Porta de saída primária SQL no Unity Catalog para consumo de analytics, feature store e data science."
+    contractRef: "contracts/odcs/posicao_renda_fixa.odcs.yaml"
+
+  - id: "port-out-mobile-document"
+    name: "Mobile Document DB Output Port"
+    type: "table"
+    protocol: "MongoDB Wire Protocol"
+    fqn: "mongodb_mobile.mobile_db.posicao_cliente"
+    description: "Porta de saída operacional de baixa latência consumida pelos backends BFF do app Mobile de investimentos."
+
+  - id: "port-out-gold-reporting"
+    name: "Gold Custody Summary Output Port"
+    type: "table"
+    protocol: "Databricks SQL / Unity Catalog"
+    fqn: "azure_databricks_uc.finance_catalog.gold_renda_fixa.custodia_liquida_consolidada"
+    description: "Porta de saída analítica contendo sumarizações executivas de saldo líquido sob custódia."

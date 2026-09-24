@@ -1,0 +1,87 @@
+# Open Data Contract Standard (ODCS) v3.0.0
+# Contrato de Dados para Produto de Dados: Customer 360 Insights
+apiVersion: v3.0.0
+kind: DataContract
+id: urn:datacontract:customer:customers-360
+status: active
+info:
+  title: Customer 360 & Lifetime Value Contract
+  version: 1.0.0
+  description: >-
+    Contrato de dados formal para o dataset dim_customers, servindo como o produto
+    de dados centralizado de clientes no Marketplace corporativo.
+  owner: Data Domain Customer & Growth
+  contact:
+    name: Squad Data Customer
+    slack: "#squad-customer-data"
+    email: data-customer@empresa.com
+
+dataset:
+  name: dim_customers
+  physicalName: analytics_dw.customer_mart.dim_customers
+  domain: Customer & Marketing
+  dataProduct: Customer 360 Insights
+  type: table
+
+serviceLevelAgreement:
+  interval: daily
+  freshness: "06:00 UTC"
+  retention: "5 years"
+  availability: "99.9%"
+
+schema:
+  - name: customer_id
+    type: string
+    required: true
+    unique: true
+    description: Identificador único e global do cliente (UUID v4)
+    classification: PII
+    tags: ["primary-key", "core-entity"]
+
+  - name: email
+    type: string
+    required: true
+    description: Endereço de e-mail corporativo ou pessoal validado
+    classification: PII-Confidential
+    tags: ["contact", "pii"]
+
+  - name: full_name
+    type: string
+    required: true
+    description: Nome completo cadastrado do cliente
+    classification: PII
+
+  - name: segment
+    type: string
+    required: true
+    description: Segmento analítico de clientes (Enterprise, Mid-Market, SMB)
+    tags: ["segmentation", "business-metric"]
+
+  - name: lifetime_value
+    type: decimal(12,2)
+    required: true
+    description: Valor total acumulado de compras líquidas do cliente em BRL
+    tags: ["financial", "gold-metric"]
+
+  - name: churn_risk_score
+    type: decimal(3,2)
+    required: false
+    description: Probabilidade estimada de churn gerada pelo modelo de ML (0.00 a 1.00)
+    tags: ["ml-feature", "predictions"]
+
+  - name: updated_at
+    type: timestamp
+    required: true
+    description: Data e hora do último processamento/atualização do registro
+
+quality:
+  - type: rowCount
+    min: 1000
+    description: O dataset deve conter no mínimo 1000 clientes cadastrados
+  - type: freshness
+    maxAge: 24h
+    column: updated_at
+  - type: validity
+    column: churn_risk_score
+    min: 0.0
+    max: 1.0

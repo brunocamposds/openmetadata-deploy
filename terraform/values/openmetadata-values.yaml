@@ -1,0 +1,51 @@
+openmetadata:
+  config:
+    database:
+      enabled: true
+      host: postgresql
+      port: 5432
+      driverClass: org.postgresql.Driver
+      dbScheme: postgresql
+      databaseName: openmetadata_db
+      auth:
+        username: openmetadata_user
+        password:
+          secretRef: openmetadata-postgresql-secret
+          secretKey: password
+      dbParams: ""
+    elasticsearch:
+      enabled: true
+      host: opensearch
+      port: 9200
+      scheme: http
+      searchType: opensearch
+      auth:
+        enabled: false
+    pipelineServiceClientConfig:
+      enabled: false
+      type: "k8s"
+      airflow:
+        auth:
+          enabled: false
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1024Mi
+  limits:
+    cpu: 2000m
+    memory: 2048Mi
+
+service:
+  type: ClusterIP
+  port: 8585
+
+startupProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  failureThreshold: 35
+  successThreshold: 1
+  httpGet:
+    path: /healthcheck
+    port: http-admin
+

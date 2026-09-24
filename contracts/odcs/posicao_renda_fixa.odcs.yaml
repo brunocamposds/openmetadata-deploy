@@ -1,0 +1,112 @@
+# Open Data Contract Standard (ODCS) v3.0.0
+# Contrato de Dados para a Tabela Central: posicao_consolidada
+apiVersion: v3.0.0
+kind: DataContract
+id: urn:datacontract:servicos-financeiros:posicao-renda-fixa
+status: active
+
+info:
+  title: "Contrato de Dados: Posição Consolidada de Renda Fixa"
+  version: "1.0.0"
+  description: >-
+    Contrato formal de dados que define a estrutura canônica da posição de renda fixa
+    (CDBs e CRAs) após consolidação e enriquecimento na camada Silver.
+  owner: "squad-renda-fixa"
+  contact:
+    name: "Squad Renda Fixa"
+    email: "rendafixa-data@empresa.com"
+
+dataset:
+  name: "posicao_consolidada"
+  physicalName: "finance_catalog.silver_renda_fixa.posicao_consolidada"
+  domain: "ServicosFinanceiros.RendaFixa"
+  dataProduct: "RendaFixaConsolidada"
+  type: "table"
+
+serviceLevelAgreement:
+  interval: "daily"
+  freshness: "07:00 BRT"
+  retention: "5 years"
+  availability: "99.9%"
+
+schema:
+  - name: "id_operacao"
+    type: "string"
+    dataType: "VARCHAR"
+    required: true
+    unique: true
+    description: "Identificador único global da operação/custódia financeira."
+    tags: ["primary-key"]
+
+  - name: "codigo_instrumento"
+    type: "string"
+    dataType: "VARCHAR"
+    required: true
+    description: "Código do ativo ou ticker no mercado (ex: CDB-BANCO-001, CRA-AGRO-2024)."
+    tags: ["instrumento-financeiro"]
+
+  - name: "tipo_instrumento"
+    type: "string"
+    dataType: "VARCHAR"
+    required: true
+    description: "Tipo de produto de renda fixa (CDB ou CRA)."
+    enum: ["CDB", "CRA"]
+
+  - name: "cpf_cliente"
+    type: "string"
+    dataType: "VARCHAR"
+    required: true
+    description: "Cadastro de Pessoa Física do investidor titular."
+    classification: "PII.Sensitive"
+
+  - name: "data_emissao"
+    type: "date"
+    dataType: "DATE"
+    required: true
+    description: "Data em que a operação de renda fixa foi emitida/contratada."
+
+  - name: "data_vencimento"
+    type: "date"
+    dataType: "DATE"
+    required: true
+    description: "Data de vencimento e resgate do título."
+
+  - name: "taxa_contratada"
+    type: "decimal(6,4)"
+    dataType: "NUMERIC"
+    required: true
+    description: "Percentual contratado ou spread da operação (ex: 110.50% CDI ou 6.25% IPCA+)."
+
+  - name: "pu_atual"
+    type: "decimal(15,6)"
+    dataType: "NUMERIC"
+    required: true
+    description: "Preço Unitário atualizado do papel a mercado ou na curva."
+
+  - name: "saldo_bruto"
+    type: "decimal(18,2)"
+    dataType: "NUMERIC"
+    required: true
+    description: "Valor do saldo bruto sob custódia em BRL."
+
+  - name: "saldo_liquido"
+    type: "decimal(18,2)"
+    dataType: "NUMERIC"
+    required: true
+    description: "Valor do saldo líquido estimado em BRL descontado de tributos (IR/IOF)."
+
+quality:
+  - type: "rowCount"
+    min: 1
+    description: "O dataset não pode estar vazio após a carga diária."
+  - type: "columnValuesToBeUnique"
+    column: "id_operacao"
+    description: "O identificador da operação deve ser estritamente único."
+  - type: "columnValuesMissingCount"
+    column: "cpf_cliente"
+    max: 0
+    description: "Não são permitidos registros sem CPF do cliente."
+  - type: "columnValuesToBeBetween"
+    column: "saldo_liquido"
+    min: 0.00
+    description: "O saldo líquido de custódia não pode ser negativo."
