@@ -1,0 +1,75 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Output Port: investments.renda_fixa.gold_movimentacao_sumarizada
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-rf-gold-movimentacao-sumarizada"
+info:
+  title: "Contrato de Dados - Movimentação Financeira Sumarizada de Renda Fixa (Gold)"
+  version: "2.0.0"
+  status: "active"
+  description: >
+    Tabela Gold com totalização diária de aportes, resgates e saldo líquido movimentado por cliente.
+  owner: "squad-renda-fixa-core"
+  contact:
+    name: "Rodrigo Lima (Staff Data Engineer)"
+    email: "rodrigo.lima@banco.com.br"
+
+domain: "Investimentos"
+quantumName: "RENDA_FIXA_DERIVADO"
+
+models:
+  - table: "investments.renda_fixa.gold_movimentacao_sumarizada"
+    description: "Tabela Gold com totalização diária de aportes, resgates e saldo líquido movimentado por cliente."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "dt_movimentacao"
+        logicalType: "date"
+        physicalType: "DATE"
+        primaryKey: true
+        nullable: false
+        description: "Data do movimento."
+        businessGlossaryTerm: "investments.glossary.DataMovimentacao"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        classification: "PII"
+        description: "Identificador do cliente."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "vl_total_aportes_dia"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Soma total de novos aportes/compras de Renda Fixa no dia."
+        businessGlossaryTerm: "investments.glossary.TotalAportes"
+
+      - name: "vl_total_resgates_dia"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Soma total de resgates parciais, totais e liquidações no dia."
+        businessGlossaryTerm: "investments.glossary.TotalResgates"
+
+      - name: "vl_fluxo_liquido_dia"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Fluxo líquido diário (Aportes - Resgates)."
+
+quality:
+  - type: "custom"
+    name: "check_aportes_positivos"
+    rule: "vl_total_aportes_dia >= 0 AND vl_total_resgates_dia >= 0"
+    severity: "critical"
+
+servicelevels:
+  availability:
+    percentage: 99.95
+  freshness:
+    cron: "0 7 * * 1-5"
+    timezone: "UTC"

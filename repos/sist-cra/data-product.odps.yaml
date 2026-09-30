@@ -1,0 +1,120 @@
+# ==============================================================================
+# Open Data Product Standard (ODPS) - v4.1
+# Produto de Dados: SIST_CRA (Source-Aligned)
+# ==============================================================================
+schema: "https://opendataproducts.org/v4.1/schema/odps.json"
+version: "4.1"
+
+# Informações de Negócio e Domínio
+domain: "Investimentos"
+subDomain: "Securitização"
+
+# Especificação Oficial do Produto de Dados (ODPS v4.1)
+product:
+  details:
+    en:
+      name: "SIST_CRA"
+      productID: "SIST_CRA"
+      version: "1.1.0"
+      visibility: "public"
+      status: "development"
+      type: "raw data"
+      description: >
+        Produto de dados Source-Aligned responsável pelo ciclo de vida, custódia e movimentações 
+        de Certificados de Recebíveis do Agronegócio (CRA). Fornece dados na camada Bronze e disponibiliza 
+        tabelas na camada Silver padronizadas com informações sobre lastro agropecuário, indexadores (CDI/IPCA) 
+        e pagamentos de juros/amortização.
+      categories:
+        - "Investimentos"
+        - "Securitizacao"
+        - "CRA"
+        - "Agronegocio"
+
+  dataHolder:
+    legalName: "Squad Securitização e Agro"
+    businessDomain: "Investimentos"
+    description: "Time proprietário e responsável pelo ciclo de vida e posições de CRA."
+    contactEmail: "squad-securitizacao@banco.com.br"
+
+  productStrategy:
+    objectives:
+      - "Consolidar posições de custódia e movimentações de CRAs integradas com as securitizadoras parceiras."
+      - "Disponibilizar camadas Silver padronizadas no DuckDB Server em formato Apache Iceberg para produtos consumidores."
+
+# Responsabilidades e Times (Governança Interna)
+team:
+  id: "squad-cra"
+  name: "Squad Securitização e Agro"
+  email: "squad-securitizacao@banco.com.br"
+  slackChannel: "#squad-cra-data"
+  role: "Data Product Owner Team"
+
+owners:
+  - id: "marcos.oliveira"
+    name: "Marcos Oliveira"
+    email: "marcos.oliveira@banco.com.br"
+    role: "Data Product Owner"
+  - id: "juliana.costa"
+    name: "Juliana Costa"
+    email: "juliana.costa@banco.com.br"
+    role: "Senior Data Engineer"
+
+# Portas de Entrada (Origem Transacional IBM DB2 / Gateway)
+inputPorts:
+  - id: "inp-cra-securitizadora-api"
+    name: "API de Integração com Securitizadoras"
+    type: "rest-api"
+    sourceSystem: "SIST_CRA_SECURITIZADORA_GATEWAY"
+    technology: "IBM DB2 / Securitizadora Gateway REST"
+    frequency: "daily-03:00-utc"
+    description: "Carga diária de arquivos CNAB/XML padronizados enviados pelas securitizadoras parceiras."
+
+# Portas de Saída (Output Ports via DuckDB / Iceberg)
+outputPorts:
+  - id: "out-cra-silver-posicao"
+    name: "Posição Diária de CRAs Granular"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.cra.silver_posicao"
+    fullyQualifiedName: "investments.cra.silver_posicao"
+    classification: "internal-confidential"
+    contract: "contracts/cra-posicao.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D+1 até 06:30 UTC"
+      freshnessHours: 24
+
+  - id: "out-cra-silver-movimentacao"
+    name: "Movimentações Financeiras de CRAs"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.cra.silver_movimentacao"
+    fullyQualifiedName: "investments.cra.silver_movimentacao"
+    classification: "internal-confidential"
+    contract: "contracts/cra-movimentacao.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D+1 até 06:30 UTC"
+      freshnessHours: 24
+
+# Contratos ODCS Associados
+contracts:
+  - id: "contract-cra-posicao"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/cra-posicao.odcs.yaml"
+  - id: "contract-cra-movimentacao"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/cra-movimentacao.odcs.yaml"
+
+# Políticas de Governança
+governance:
+  classification: "Restrito"
+  compliance:
+    - "LGPD"
+    - "CVM-600"
+  retentionYears: 7
+  billingCostCenter: "CC-INVEST-10884"

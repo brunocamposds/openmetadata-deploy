@@ -43,11 +43,11 @@ make status
 ```
 
 ### 3. Acessar a interface Web
-Abra o túnel executando:
-```bash
-make port-forward
-```
-Acesse no seu navegador: [http://localhost:8585](http://localhost:8585)
+
+Graças ao Ingress integrado com o **Traefik**, o OpenMetadata pode ser acessado diretamente sem necessidade de túneis manuais:
+* **Acesso direto (Recomendado)**: [http://localhost](http://localhost)
+* **Acesso via domínio local**: [http://openmetadata.local](http://openmetadata.local) *(requer adicionar `127.0.0.1 openmetadata.local` no arquivo de hosts do Windows)*
+* *(Opcional via port-forward)*: `make port-forward` para abrir túnel em [http://localhost:8585](http://localhost:8585)
 
 #### Credenciais de Acesso Inicial:
 * **E-mail:** `admin@open-metadata.org`
@@ -55,24 +55,41 @@ Acesse no seu navegador: [http://localhost:8585](http://localhost:8585)
 
 ---
 
-## 📦 Produtos e Contratos de Dados (DataOps)
+## 📦 Produtos e Contratos de Dados (DataOps & Governance as Code)
 
-O projeto contém contratos e rotinas de automação interativa:
+O projeto contém três repositórios simulados em arquitetura Data Mesh (`repos/`):
+* **`repos/sist-cdb`** (*Source-Aligned*): Emissão e posições diárias de CDBs no Azure Databricks Unity Catalog (`investments.cdb.*`), regidos pelos contratos ODCS `cdb-posicao.odcs.yaml` e `cdb-movimentacao.odcs.yaml`.
+* **`repos/sist-cra`** (*Source-Aligned*): Securitização de Agronegócio no Azure Databricks Unity Catalog (`investments.cra.*`), regidos pelos contratos ODCS `cra-posicao.odcs.yaml` e `cra-movimentacao.odcs.yaml`.
+* **`repos/renda-fixa-derivado`** (*Consumer-Aligned*): Visão consolidada de Renda Fixa unificando CDB e CRA, disponibilizando tabelas analíticas Silver/Gold no Databricks e Serving Store em MongoDB Atlas (`investments_serving.rf_customer_positions`), regidos pelos contratos `rf-posicao-consolidada.odcs.yaml`, `rf-movimentacao-consolidada.odcs.yaml` e `rf-mongo-canal.odcs.yaml`.
 
-* **Contratos:**
-  * `contracts/odps/renda_fixa.odps.yaml`: Especificação do Produto de Dados (*ODPS*).
-  * `contracts/odcs/posicao_renda_fixa.odcs.yaml`: Contrato de Dados (*ODCS*) com schema, SLAs e governança.
-
-* **Executar o cadastro automatizado do Data Product:**
+* **Executar a esteira de governança CI/CD por repositório:**
   ```bash
-  make seed-renda-fixa
+  wsl -d Ubuntu -- ./scripts/deploy_repo_product.sh repos/sist-cdb
+  wsl -d Ubuntu -- ./scripts/deploy_repo_product.sh repos/sist-cra
+  wsl -d Ubuntu -- ./scripts/deploy_repo_product.sh repos/renda-fixa-derivado
   ```
 
 ---
 
-## 🧹 Limpeza do Ambiente
+## ⏸️ Ciclo de Vida: Pausar e Retomar (Sem Perder Dados)
 
-Para remover todos os recursos gerenciados pelo Terraform:
+Para liberar 100% da CPU e Memória RAM sem perder o estado do banco e dos índices (evitando ter que rodar o cold-start de novo):
+
+* **Pausar o ambiente (0% CPU/RAM):**
+  ```bash
+  make stop
+  ```
+
+* **Retomar o ambiente (~30 segundos):**
+  ```bash
+  make start
+  ```
+
+---
+
+## 🧹 Destruição Completa do Ambiente
+
+Para remover **todos** os recursos gerenciados pelo Terraform (incluindo volumes de dados):
 ```bash
 make destroy
 ```

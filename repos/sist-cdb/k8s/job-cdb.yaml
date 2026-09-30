@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pipeline-cdb
+  namespace: openmetadata
+  labels:
+    app: pipeline-cdb
+    data-product: dp-sist-cdb
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: pipeline-cdb
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: runner
+        image: duckdb-pipeline-runner:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - python
+        - /app/repos/sist-cdb/src/pipeline_cdb.py
+        env:
+        - name: DUCKDB_SERVER_HOST
+          value: "duckdb-server.openmetadata.svc.cluster.local"
+        - name: DUCKDB_SERVER_PORT
+          value: "5433"
+        - name: DUCKDB_DB
+          value: "investments"
+        - name: DUCKDB_USER
+          value: "duckdb_user"
+        - name: DUCKDB_PASSWORD
+          value: "duckdb_password"
+        - name: OPENMETADATA_URL
+          value: "http://openmetadata.openmetadata.svc.cluster.local:8585/api"
+        volumeMounts:
+        - name: workspace-volume
+          mountPath: /app
+      volumes:
+      - name: workspace-volume
+        hostPath:
+          path: /mnt/c/Users/bruno/Workspace/ai-data-engineer-workspace/ai-datagov-openmetadata-k8s
+          type: Directory

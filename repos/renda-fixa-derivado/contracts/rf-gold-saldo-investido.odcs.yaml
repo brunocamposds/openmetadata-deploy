@@ -1,0 +1,88 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Output Port: investments.renda_fixa.gold_saldo_investido
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-rf-gold-saldo-investido"
+info:
+  title: "Contrato de Dados - Saldo Investido em Renda Fixa na Instituição (Gold)"
+  version: "2.0.0"
+  status: "active"
+  description: >
+    Camada Gold com saldo total consolidado investido na instituição por cliente por data, 
+    agregando o patrimônio total de CDB e CRA.
+  owner: "squad-renda-fixa-core"
+  contact:
+    name: "Rodrigo Lima (Staff Data Engineer)"
+    email: "rodrigo.lima@banco.com.br"
+
+domain: "Investimentos"
+quantumName: "RENDA_FIXA_DERIVADO"
+
+models:
+  - table: "investments.renda_fixa.gold_saldo_investido"
+    description: "Camada Gold com saldo total consolidado investido na instituição por cliente por data."
+    type: "table"
+    criticality: "critical"
+    columns:
+      - name: "dt_posicao"
+        logicalType: "date"
+        physicalType: "DATE"
+        primaryKey: true
+        nullable: false
+        description: "Data de referência do saldo consolidado."
+        businessGlossaryTerm: "investments.glossary.DataPosicao"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        classification: "PII"
+        description: "Identificador do cliente titular."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "vl_total_aplicado_instituicao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Soma de todo o capital principal alocado em Renda Fixa."
+        businessGlossaryTerm: "investments.glossary.SaldoInvestidoTotal"
+
+      - name: "vl_total_bruto_instituicao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Patrimônio bruto total de Renda Fixa na data."
+        businessGlossaryTerm: "investments.glossary.SaldoBruto"
+
+      - name: "vl_total_liquido_instituicao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Patrimônio líquido total de Renda Fixa disponível para resgate."
+        businessGlossaryTerm: "investments.glossary.SaldoLiquido"
+
+      - name: "qt_titulos_ativos"
+        logicalType: "integer"
+        physicalType: "INT"
+        nullable: false
+        description: "Quantidade total de títulos distintos em carteira."
+
+quality:
+  - type: "custom"
+    name: "check_saldo_gold_consistente"
+    rule: "vl_total_liquido_instituicao <= vl_total_bruto_instituicao"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_qt_titulos_positiva"
+    rule: "qt_titulos_ativos > 0"
+    severity: "error"
+
+servicelevels:
+  availability:
+    percentage: 99.95
+  freshness:
+    cron: "0 7 * * 1-5"
+    timezone: "UTC"

@@ -1,0 +1,108 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Dataset: investments.cdb.silver_movimentacao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-cdb-silver-movimentacao"
+info:
+  title: "Contrato de Dados - Movimentações Financeiras de CDB"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato que especifica eventos de aporte, resgate parcial, resgate total 
+    e amortização de CDBs processados na camada Silver.
+  owner: "squad-cdb"
+  contact:
+    name: "Carlos Mendes (Lead Data Engineer)"
+    email: "carlos.mendes@banco.com.br"
+
+domain: "Investimentos"
+dataset: "silver_movimentacao"
+quantumName: "SIST_CDB"
+
+models:
+  - table: "investments.cdb.silver_movimentacao"
+    description: "Tabela Silver com eventos de movimentações em títulos de CDB."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_movimentacao"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Identificador global do evento de movimentação."
+        businessGlossaryTerm: "investments.glossary.IdentificadorMovimentacao"
+
+      - name: "dt_movimentacao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data em que o lançamento financeiro ocorreu."
+        businessGlossaryTerm: "investments.glossary.DataMovimentacao"
+
+      - name: "cd_certificado"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Código do certificado de CDB impactado pela operação."
+        businessGlossaryTerm: "investments.glossary.CertificadoCDB"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "Identificador unificado do cliente solicitante/titular."
+
+      - name: "tp_movimentacao"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["APORTE", "RESGATE_PARCIAL", "RESGATE_TOTAL", "PAGAMENTO_JUROS"]
+        description: "Tipo de evento de fluxo financeiro."
+        businessGlossaryTerm: "investments.glossary.TipoMovimentacao"
+
+      - name: "vl_movimentacao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor financeiro nominal da transação."
+        businessGlossaryTerm: "investments.glossary.ValorMovimentado"
+
+      - name: "vl_ir_retido"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: true
+        description: "Imposto de renda retido na fonte no momento do resgate."
+
+      - name: "vl_iof_retido"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: true
+        description: "IOF regressivo incidente sobre resgates inferiores a 30 dias."
+
+      - name: "dh_evento_origem"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Data/hora transacional no sistema legado Oracle."
+
+quality:
+  - type: "custom"
+    name: "check_valor_movimentacao_positivo"
+    rule: "vl_movimentacao > 0"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_impostos_nao_negativos"
+    rule: "(vl_ir_retido IS NULL OR vl_ir_retido >= 0) AND (vl_iof_retido IS NULL OR vl_iof_retido >= 0)"
+    severity: "error"
+
+servicelevels:
+  availability:
+    percentage: 99.9
+  freshness:
+    cron: "0 6 * * 1-5"
+    timezone: "UTC"

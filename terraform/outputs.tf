@@ -4,27 +4,30 @@ output "namespace" {
 }
 
 output "access_instructions" {
-  description = "Instruções para acessar a interface web do OpenMetadata no host Windows"
+  description = "Instruções de acesso aos serviços no host Windows"
   value       = <<EOT
-Para acessar a interface do OpenMetadata no seu navegador (Host Windows):
+Serviços disponíveis no cluster K3s e host Windows:
 
-1. Execute o port-forward no WSL Ubuntu:
-   kubectl port-forward svc/openmetadata 8585:8585 -n ${kubernetes_namespace.om_namespace.metadata[0].name}
+1. OpenMetadata UI:
+   - URL: http://localhost (via Traefik Ingress) ou http://localhost:8585
+   - Usuário: admin@open-metadata.org
+   - Senha: admin
 
-2. Abra no navegador:
-   http://localhost:8585
+2. DuckDB Server (pg_duckdb - Postgres Protocol):
+   - Conexão local (DBeaver / OM): postgresql://duckdb_user:duckdb_password@localhost:5433/investments
+   - Conexão interna cluster: postgresql://duckdb_user:duckdb_password@duckdb-server.openmetadata.svc.cluster.local:5432/investments
+   - Database: investments
+   - Usuário: duckdb_user
+   - Senha: duckdb_password
 
-Usuário padrão inicial: admin@open-metadata.org
-Senha padrão inicial: admin
-EOT
-}
+3. DuckDB Web UI (CloudBeaver):
+   - URL: http://localhost:8978
+   - Conectado ao DuckDB Server via rede
 
-output "mock_runner_instructions" {
-  description = "Comando para executar os scripts de mock de Data Products e Linhagem"
-  value       = <<EOT
-Com o OpenMetadata rodando e acessível na porta 8585:
-
-docker run --rm --net=host -e OPENMETADATA_SERVER_URL="http://localhost:8585/api" om-mock-runner:latest python scripts/seed_data_products.py
-docker run --rm --net=host -e OPENMETADATA_SERVER_URL="http://localhost:8585/api" om-mock-runner:latest python scripts/seed_lineage.py
+4. MongoDB Serving Layer:
+   - Conexão local (Compass / CLI): mongodb://localhost:27017
+   - Conexão interna cluster: mongodb://mongodb.openmetadata.svc.cluster.local:27017
+   - Database: investments_serving
+   - Collection: rf_customer_positions
 EOT
 }

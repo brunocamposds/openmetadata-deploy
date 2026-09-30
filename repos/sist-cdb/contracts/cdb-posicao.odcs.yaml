@@ -1,0 +1,148 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Dataset: investments.cdb.silver_posicao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-cdb-silver-posicao"
+info:
+  title: "Contrato de Dados - Posição Diária de CDB"
+  version: "1.1.0"
+  status: "active"
+  description: >
+    Contrato que rege a disponibilização das posições diárias de custódia de CDBs 
+    por cliente e por certificado no DuckDB (Tabelas no formato Apache Iceberg).
+  owner: "squad-cdb"
+  contact:
+    name: "Carlos Mendes (Lead Data Engineer)"
+    email: "carlos.mendes@banco.com.br"
+
+domain: "Investimentos"
+dataset: "silver_posicao"
+quantumName: "SIST_CDB"
+
+# Especificação do Schema
+models:
+  - table: "investments.cdb.silver_posicao"
+    description: "Tabela Silver com posição diária detalhada por certificado de CDB."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_posicao"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Hash identificador único do snapshot diário (dt_posicao + cd_certificado)."
+        businessGlossaryTerm: "investments.glossary.IdentificadorPosicao"
+
+      - name: "dt_posicao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data de referência da posição de custódia (D-0 ou D-1)."
+        businessGlossaryTerm: "investments.glossary.DataPosicao"
+
+      - name: "cd_certificado"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Código identificador do certificado de CDB emitido."
+        businessGlossaryTerm: "investments.glossary.CertificadoCDB"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "Identificador unificado do cliente titular do investimento."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "cd_tipo_cdb"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["POS_FIXADO", "PRE_FIXADO", "IPCA_PLUS"]
+        description: "Modalidade de indexação da taxa do CDB."
+
+      - name: "vl_principal_aplicado"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor financeiro original investido no certificado."
+        businessGlossaryTerm: "investments.glossary.PrincipalAplicado"
+
+      - name: "vl_saldo_bruto"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor bruto acumulado atualizado na data da posição com rentabilidade."
+        businessGlossaryTerm: "investments.glossary.SaldoBruto"
+
+      - name: "vl_saldo_liquido"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor líquido projetado deduzido de IR regressivo e IOF se aplicável."
+        businessGlossaryTerm: "investments.glossary.SaldoLiquido"
+
+      - name: "tx_remuneracao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(8,4)"
+        nullable: false
+        description: "Taxa pactuada (ex: 105.50 para % CDI ou 12.5000 para Pré-fixado a.a.)."
+
+      - name: "dt_aplicacao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data em que a aplicação inicial foi liquidada."
+
+      - name: "dt_vencimento"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data de vencimento final do título."
+
+      - name: "dh_ingestao_utc"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Timestamp UTC de processamento da camada Silver."
+
+# Regras e Expectativas de Qualidade dos Dados (Data Quality)
+quality:
+  - type: "custom"
+    name: "check_saldo_positivo"
+    description: "O saldo bruto e o saldo líquido devem ser estritamente maiores ou iguais a zero."
+    rule: "vl_saldo_bruto >= 0 AND vl_saldo_liquido >= 0"
+    severity: "error"
+
+  - type: "custom"
+    name: "check_consistencia_liquido_bruto"
+    description: "O saldo líquido nunca pode ser maior que o saldo bruto."
+    rule: "vl_saldo_liquido <= vl_saldo_bruto"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_vencimento_posterior_aplicacao"
+    description: "A data de vencimento deve ser maior ou igual à data de aplicação."
+    rule: "dt_vencimento >= dt_aplicacao"
+    severity: "error"
+
+  - type: "freshness"
+    name: "check_freshness_d1"
+    description: "A data máxima de posição deve ser referente ao último dia útil."
+    maxAgeHours: 28
+    severity: "error"
+
+# Acordo de Nível de Serviço (SLA)
+servicelevels:
+  availability:
+    percentage: 99.9
+  freshness:
+    cron: "0 6 * * 1-5" # 06:00 UTC em dias úteis
+    timezone: "UTC"
+  retention:
+    period: "5 years"
+    storageClass: "Local DuckDB / Iceberg Storage"

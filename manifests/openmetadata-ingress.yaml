@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openmetadata-ingress
+  namespace: openmetadata
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+  # Acesso via domínio customizado
+  - host: openmetadata.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openmetadata
+            port:
+              number: 8585
+  # Acesso direto via localhost na porta 80
+  - host: localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openmetadata
+            port:
+              number: 8585
+  # Regra catch-all (acesso direto por IP ou outros hostnames)
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openmetadata
+            port:
+              number: 8585

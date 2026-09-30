@@ -1,0 +1,91 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Dataset: investments.cra.silver_movimentacao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-cra-silver-movimentacao"
+info:
+  title: "Contrato de Dados - Movimentações Financeiras de CRA"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato que especifica eventos de liquidação de subscrição, pagamento de cupons (juros) 
+    e amortizações parciais ou finais de títulos de CRA.
+  owner: "squad-cra"
+  contact:
+    name: "Juliana Costa (Senior Data Engineer)"
+    email: "juliana.costa@banco.com.br"
+
+domain: "Investimentos"
+dataset: "silver_movimentacao"
+quantumName: "SIST_CRA"
+
+models:
+  - table: "investments.cra.silver_movimentacao"
+    description: "Tabela Silver com eventos transacionais e fluxos financeiros em títulos de CRA."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_movimentacao"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Hash identificador único do evento de movimentação."
+        businessGlossaryTerm: "investments.glossary.IdentificadorMovimentacao"
+
+      - name: "dt_movimentacao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data contábil e de liquidação da movimentação."
+        businessGlossaryTerm: "investments.glossary.DataMovimentacao"
+
+      - name: "cd_cra_isin"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Código ISIN do CRA associado."
+        businessGlossaryTerm: "investments.glossary.CertificadoCRA"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "Identificador unificado do cliente."
+
+      - name: "tp_movimentacao"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["APORTE_SUBSCRICAO", "PAGAMENTO_CUPOM_JUROS", "AMORTIZACAO_PARCIAL", "LIQUIDACAO_FINAL"]
+        description: "Natureza do evento financeiro."
+        businessGlossaryTerm: "investments.glossary.TipoMovimentacao"
+
+      - name: "vl_movimentacao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor financeiro líquido creditado ou debitado da conta do investidor."
+        businessGlossaryTerm: "investments.glossary.ValorMovimentado"
+
+      - name: "dh_evento_origem"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Timestamp registrado no sistema de custódia da securitizadora."
+
+quality:
+  - type: "custom"
+    name: "check_valor_positivo"
+    rule: "vl_movimentacao > 0"
+    severity: "critical"
+
+servicelevels:
+  availability:
+    percentage: 99.9
+  freshness:
+    cron: "0 6 * * 1-5"
+    timezone: "UTC"

@@ -1,0 +1,200 @@
+# ==============================================================================
+# Open Data Product Standard (ODPS) - v4.1
+# Produto de Dados: RENDA_FIXA_DERIVADO (Consumer-Aligned / Derived)
+# ==============================================================================
+schema: "https://opendataproducts.org/v4.1/schema/odps.json"
+version: "4.1"
+
+# Informações de Negócio e Domínio
+domain: "Investimentos"
+subDomain: "Renda Fixa"
+
+# Especificação Oficial do Produto de Dados (ODPS v4.1)
+product:
+  details:
+    en:
+      name: "RENDA_FIXA_DERIVADO"
+      productID: "RENDA_FIXA_DERIVADO"
+      version: "2.0.0"
+      visibility: "public"
+      status: "development"
+      type: "derived data"
+      description: >
+        Produto de dados derivado (Consumer-Aligned) responsável por unificar a visão patrimonial de 
+        Renda Fixa do cliente na instituição. Consome os produtos de dados Source-Aligned SIST_CDB e SIST_CRA, 
+        disponibilizando tabelas consolidadas granulares na camada Silver e métricas executivas/analíticas 
+        na camada Gold. Provê ainda uma porta de saída operacional (Serving Store) em MongoDB para atender 
+        backends e canais de atendimento digital (App/Web/APIs).
+      categories:
+        - "Investimentos"
+        - "Renda Fixa"
+        - "Consolidado"
+        - "Serving Store"
+
+  dataHolder:
+    legalName: "Squad Renda Fixa Consolidada"
+    businessDomain: "Investimentos"
+    description: "Time proprietário da visão unificada patrimonial de Renda Fixa e Serving Store."
+    contactEmail: "squad-rendafixa-core@banco.com.br"
+
+  productStrategy:
+    objectives:
+      - "Unificar a visão patrimonial de Renda Fixa consolidando posições e movimentações de CDB e CRA."
+      - "Alimentar a camada analítica Gold no DuckDB Server e a camada operacional em MongoDB para canais digitais."
+
+# Responsabilidades e Times (Governança Interna)
+team:
+  id: "squad-renda-fixa-core"
+  name: "Squad Renda Fixa Consolidada"
+  email: "squad-rendafixa-core@banco.com.br"
+  slackChannel: "#squad-rendafixa-core"
+  role: "Data Product Owner Team"
+
+owners:
+  - id: "beatriz.souza"
+    name: "Beatriz Souza"
+    email: "beatriz.souza@banco.com.br"
+    role: "Principal Data Product Manager"
+  - id: "rodrigo.lima"
+    name: "Rodrigo Lima"
+    email: "rodrigo.lima@banco.com.br"
+    role: "Staff Data Engineer"
+
+# Portas de Entrada / Dependências Upstream (Linhagem Automática)
+inputPorts:
+  - id: "inp-upstream-sist-cdb-posicao"
+    name: "Upstream SIST_CDB - Posição Silver"
+    type: "sql-table"
+    upstreamDataProduct: "dp-sist-cdb"
+    fullyQualifiedName: "investments.cdb.silver_posicao"
+    contract: "repos/sist-cdb/contracts/cdb-posicao.odcs.yaml"
+
+  - id: "inp-upstream-sist-cdb-movimentacao"
+    name: "Upstream SIST_CDB - Movimentação Silver"
+    type: "sql-table"
+    upstreamDataProduct: "dp-sist-cdb"
+    fullyQualifiedName: "investments.cdb.silver_movimentacao"
+    contract: "repos/sist-cdb/contracts/cdb-movimentacao.odcs.yaml"
+
+  - id: "inp-upstream-sist-cra-posicao"
+    name: "Upstream SIST_CRA - Posição Silver"
+    type: "sql-table"
+    upstreamDataProduct: "dp-sist-cra"
+    fullyQualifiedName: "investments.cra.silver_posicao"
+    contract: "repos/sist-cra/contracts/cra-posicao.odcs.yaml"
+
+  - id: "inp-upstream-sist-cra-movimentacao"
+    name: "Upstream SIST_CRA - Movimentação Silver"
+    type: "sql-table"
+    upstreamDataProduct: "dp-sist-cra"
+    fullyQualifiedName: "investments.cra.silver_movimentacao"
+    contract: "repos/sist-cra/contracts/cra-movimentacao.odcs.yaml"
+
+# Portas de Saída (Output Ports)
+outputPorts:
+  # 1. Porta Analítica Silver: Posição Consolidada
+  - id: "out-rf-silver-posicao"
+    name: "Posição de Renda Fixa Consolidada (Silver)"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.renda_fixa.silver_posicao"
+    fullyQualifiedName: "investments.renda_fixa.silver_posicao"
+    classification: "internal-confidential"
+    contract: "contracts/rf-posicao-consolidada.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.95%"
+      latency: "D+1 até 07:00 UTC"
+      freshnessHours: 24
+
+  # 2. Porta Analítica Silver: Movimentação Consolidada
+  - id: "out-rf-silver-movimentacao"
+    name: "Movimentação de Renda Fixa Consolidada (Silver)"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.renda_fixa.silver_movimentacao"
+    fullyQualifiedName: "investments.renda_fixa.silver_movimentacao"
+    classification: "internal-confidential"
+    contract: "contracts/rf-movimentacao-consolidada.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.95%"
+      latency: "D+1 até 07:00 UTC"
+      freshnessHours: 24
+
+  # 3. Porta Analítica Gold: Saldo Investido na Instituição
+  - id: "out-rf-gold-saldo-investido"
+    name: "Saldo Investido em Renda Fixa na Instituição (Gold)"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.renda_fixa.gold_saldo_investido"
+    fullyQualifiedName: "investments.renda_fixa.gold_saldo_investido"
+    classification: "internal-confidential"
+    contract: "contracts/rf-gold-saldo-investido.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.95%"
+      latency: "D+1 até 07:30 UTC"
+      freshnessHours: 24
+
+  # 4. Porta Analítica Gold: Movimentação Financeira Sumarizada
+  - id: "out-rf-gold-movimentacao-sumarizada"
+    name: "Movimentação Financeira Sumarizada em Renda Fixa (Gold)"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.renda_fixa.gold_movimentacao_sumarizada"
+    fullyQualifiedName: "investments.renda_fixa.gold_movimentacao_sumarizada"
+    classification: "internal-confidential"
+    contract: "contracts/rf-gold-movimentacao-sumarizada.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.95%"
+      latency: "D+1 até 07:30 UTC"
+      freshnessHours: 24
+
+  # 5. Porta Operacional Serving Layer: MongoDB Local (K3s)
+  - id: "out-mongodb-customer-positions"
+    name: "Extrato Consolidado para Canais Digitais (Serving Store MongoDB)"
+    type: "document-collection"
+    protocol: "mongodb"
+    platform: "mongodb"
+    storageLocation: "mongodb://mongodb.openmetadata.svc.cluster.local:27017/investments_serving.rf_customer_positions"
+    fullyQualifiedName: "investments_serving.collections.rf_customer_positions"
+    classification: "internal-confidential"
+    contract: "contracts/rf-mongo-serving.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.99%"
+      latency: "Realtime query < 50ms"
+      freshnessHours: 24
+
+# Contratos de Dados Associados (ODCS)
+contracts:
+  - id: "contract-rf-posicao-consolidada"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/rf-posicao-consolidada.odcs.yaml"
+  - id: "contract-rf-movimentacao-consolidada"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/rf-movimentacao-consolidada.odcs.yaml"
+  - id: "contract-rf-gold-saldo-investido"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/rf-gold-saldo-investido.odcs.yaml"
+  - id: "contract-rf-gold-movimentacao-sumarizada"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/rf-gold-movimentacao-sumarizada.odcs.yaml"
+  - id: "contract-rf-mongo-serving"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/rf-mongo-serving.odcs.yaml"
+
+# Políticas de Governança
+governance:
+  classification: "Restrito"
+  compliance:
+    - "LGPD"
+    - "BACEN-4658"
+    - "CVM-600"
+  retentionYears: 5
+  billingCostCenter: "CC-INVEST-10999"

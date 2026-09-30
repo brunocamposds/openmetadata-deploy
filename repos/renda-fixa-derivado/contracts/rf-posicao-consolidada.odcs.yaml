@@ -1,0 +1,109 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Output Port: investments.renda_fixa.silver_posicao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-rf-posicao-consolidada"
+info:
+  title: "Contrato de Dados - Posição Consolidada de Renda Fixa (Silver)"
+  version: "2.0.0"
+  status: "active"
+  description: >
+    Contrato que estabelece a padronização das posições granulares (Silver) 
+    consolidadas de Renda Fixa unificando CDB e CRA.
+  owner: "squad-renda-fixa-core"
+  contact:
+    name: "Rodrigo Lima (Staff Data Engineer)"
+    email: "rodrigo.lima@banco.com.br"
+
+domain: "Investimentos"
+quantumName: "RENDA_FIXA_DERIVADO"
+
+models:
+  - table: "investments.renda_fixa.silver_posicao"
+    description: "Visão unificada e normalizada de todas as posições ativas de CDB e CRA."
+    type: "table"
+    criticality: "critical"
+    columns:
+      - name: "id_posicao_unificada"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Hash identificador universal da posição."
+        businessGlossaryTerm: "investments.glossary.IdentificadorPosicao"
+
+      - name: "dt_posicao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data do snapshot contábil."
+        businessGlossaryTerm: "investments.glossary.DataPosicao"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "ID unificado do cliente."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "tp_produto_renda_fixa"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["CDB", "CRA"]
+        description: "Classificação do produto de origem."
+        businessGlossaryTerm: "investments.glossary.TipoProdutoRendaFixa"
+
+      - name: "cd_instrumento"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Código do certificado ou ISIN do papel."
+
+      - name: "vl_principal_aplicado"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor aplicado na aquisição."
+        businessGlossaryTerm: "investments.glossary.PrincipalAplicado"
+
+      - name: "vl_saldo_bruto"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Saldo bruto a mercado."
+        businessGlossaryTerm: "investments.glossary.SaldoBruto"
+
+      - name: "vl_saldo_liquido"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Saldo líquido após deduções tributárias projetadas."
+        businessGlossaryTerm: "investments.glossary.SaldoLiquido"
+
+      - name: "dt_vencimento"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data de vencimento do título."
+
+quality:
+  - type: "custom"
+    name: "check_saldo_liquido_menor_bruto"
+    rule: "vl_saldo_liquido <= vl_saldo_bruto"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_principal_positivo"
+    rule: "vl_principal_aplicado > 0"
+    severity: "error"
+
+servicelevels:
+  availability:
+    percentage: 99.95
+  freshness:
+    cron: "0 7 * * 1-5"
+    timezone: "UTC"

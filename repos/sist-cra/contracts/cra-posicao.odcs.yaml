@@ -1,0 +1,135 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Dataset: investments.cra.silver_posicao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-cra-silver-posicao"
+info:
+  title: "Contrato de Dados - Posição Diária de CRA"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato referente à posição de custódia de Certificados de Recebíveis do Agronegócio (CRA) 
+    armazenada em DuckDB com formato Apache Iceberg (investments.cra.silver_posicao).
+  owner: "squad-cra"
+  contact:
+    name: "Juliana Costa (Senior Data Engineer)"
+    email: "juliana.costa@banco.com.br"
+
+domain: "Investimentos"
+dataset: "silver_posicao"
+quantumName: "SIST_CRA"
+
+models:
+  - table: "investments.cra.silver_posicao"
+    description: "Tabela Silver com posição diária detalhada por emissão/série de CRA."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_posicao"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Hash identificador único do snapshot diário (dt_posicao + cd_cra_isin)."
+        businessGlossaryTerm: "investments.glossary.IdentificadorPosicao"
+
+      - name: "dt_posicao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data de referência da posição de custódia."
+        businessGlossaryTerm: "investments.glossary.DataPosicao"
+
+      - name: "cd_cra_isin"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Código ISIN / CETIP do título de CRA emitido."
+        businessGlossaryTerm: "investments.glossary.CertificadoCRA"
+
+      - name: "nm_emissora_securitizadora"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Razão social da empresa securitizadora responsável pelo lastro."
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "Identificador do cliente investidor detentor das cotas/títulos."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "cd_tipo_remuneracao"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["IPCA_SPREAD", "CDI_SPREAD", "PREFIXADO"]
+        description: "Estrutura de remuneração do título."
+
+      - name: "qt_titulos_custodia"
+        logicalType: "integer"
+        physicalType: "BIGINT"
+        nullable: false
+        description: "Quantidade de títulos ou frações de CRA em custódia."
+
+      - name: "vl_principal_aplicado"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor financeiro investido na data da liquidação da subscrição."
+        businessGlossaryTerm: "investments.glossary.PrincipalAplicado"
+
+      - name: "vl_saldo_bruto"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor do saldo bruto a mercado / curva na data de posição."
+        businessGlossaryTerm: "investments.glossary.SaldoBruto"
+
+      - name: "vl_saldo_liquido"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Saldo líquido para o investidor (CRAs para PF contam com isenção fiscal de IR)."
+        businessGlossaryTerm: "investments.glossary.SaldoLiquido"
+
+      - name: "dt_emissao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data em que a série do CRA foi originalmente emitida."
+
+      - name: "dt_vencimento"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data de repactuação ou vencimento final do título."
+
+      - name: "dh_ingestao_utc"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Timestamp UTC de consolidação do registro na camada Silver."
+
+quality:
+  - type: "custom"
+    name: "check_saldo_positivo"
+    rule: "vl_saldo_bruto >= 0 AND vl_saldo_liquido >= 0"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_isencao_pf_liquido_igual_bruto"
+    description: "Para pessoas físicas isentas, saldo líquido deve ser igual ao saldo bruto."
+    rule: "vl_saldo_liquido <= vl_saldo_bruto"
+    severity: "error"
+
+servicelevels:
+  availability:
+    percentage: 99.9
+  freshness:
+    cron: "0 6 * * 1-5"
+    timezone: "UTC"

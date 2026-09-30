@@ -1,0 +1,100 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Output Port Operacional: MongoDB Serving Layer (Canais e APIs de Backend)
+# Database: investments_serving
+# Collection: rf_customer_positions
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-rf-mongo-serving"
+info:
+  title: "Contrato de Dados - Serving Layer MongoDB para Canais e Backends"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato que rege a estrutura do documento BSON/JSON na coleção de Serving do MongoDB. 
+    Esta coleção é atualizada diariamente e consultada por microsserviços de backend para 
+    exibir o extrato e posição consolidada no aplicativo móvel e internet banking.
+  owner: "squad-renda-fixa-core"
+  contact:
+    name: "Rodrigo Lima (Staff Data Engineer)"
+    email: "rodrigo.lima@banco.com.br"
+
+domain: "Investimentos"
+quantumName: "RENDA_FIXA_DERIVADO"
+
+models:
+  - table: "investments_serving.rf_customer_positions"
+    description: "Document store com a visão completa pré-materializada do cliente em Renda Fixa."
+    type: "document"
+    criticality: "mission-critical"
+    columns:
+      - name: "_id"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Chave composta de busca direta no MongoDB (id_cliente)."
+
+      - name: "customerId"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "ID do cliente indexado para busca pontual rápida (índice único)."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "snapshotDate"
+        logicalType: "date"
+        physicalType: "STRING"
+        nullable: false
+        description: "Data do snapshot contábil (formato ISO-8601: YYYY-MM-DD)."
+        businessGlossaryTerm: "investments.glossary.DataPosicao"
+
+      - name: "totalInvested"
+        logicalType: "decimal"
+        physicalType: "DOUBLE"
+        nullable: false
+        description: "Total do patrimônio em Renda Fixa investido."
+        businessGlossaryTerm: "investments.glossary.SaldoInvestidoTotal"
+
+      - name: "totalGrossBalance"
+        logicalType: "decimal"
+        physicalType: "DOUBLE"
+        nullable: false
+        description: "Saldo bruto a mercado."
+        businessGlossaryTerm: "investments.glossary.SaldoBruto"
+
+      - name: "totalNetBalance"
+        logicalType: "decimal"
+        physicalType: "DOUBLE"
+        nullable: false
+        description: "Saldo líquido disponível para resgate."
+        businessGlossaryTerm: "investments.glossary.SaldoLiquido"
+
+      - name: "productsSummary"
+        logicalType: "array"
+        physicalType: "ARRAY<STRUCT>"
+        nullable: false
+        description: "Lista aninhada com a quebra por produto (CDB, CRA) e lista de títulos ativos."
+
+      - name: "lastUpdatedUtc"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Data/hora da última carga sincronizada pelo Databricks."
+
+quality:
+  - type: "custom"
+    name: "check_balances_valid"
+    rule: "totalNetBalance <= totalGrossBalance AND totalInvested >= 0"
+    severity: "critical"
+
+servicelevels:
+  availability:
+    percentage: 99.99
+  latency:
+    p95: "15ms"
+    p99: "30ms"
+  freshness:
+    cron: "0 8 * * 1-5" # 08:00 UTC

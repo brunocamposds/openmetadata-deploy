@@ -34,3 +34,7 @@ ENV/
 Thumbs.db
 .idea/
 .vscode/
+
+# Scratch & Temporary
+scratch/
+

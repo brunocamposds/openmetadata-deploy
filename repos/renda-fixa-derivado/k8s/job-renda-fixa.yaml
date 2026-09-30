@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pipeline-renda-fixa
+  namespace: openmetadata
+  labels:
+    app: pipeline-renda-fixa
+    data-product: dp-renda-fixa-derivado
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: pipeline-renda-fixa
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: runner
+        image: duckdb-pipeline-runner:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - python
+        - /app/repos/renda-fixa-derivado/src/pipeline_renda_fixa.py
+        env:
+        - name: DUCKDB_SERVER_HOST
+          value: "duckdb-server.openmetadata.svc.cluster.local"
+        - name: DUCKDB_SERVER_PORT
+          value: "5433"
+        - name: DUCKDB_DB
+          value: "investments"
+        - name: DUCKDB_USER
+          value: "duckdb_user"
+        - name: DUCKDB_PASSWORD
+          value: "duckdb_password"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb.openmetadata.svc.cluster.local:27017"
+        - name: OPENMETADATA_URL
+          value: "http://openmetadata.openmetadata.svc.cluster.local:8585/api"
+        volumeMounts:
+        - name: workspace-volume
+          mountPath: /app
+      volumes:
+      - name: workspace-volume
+        hostPath:
+          path: /mnt/c/Users/bruno/Workspace/ai-data-engineer-workspace/ai-datagov-openmetadata-k8s
+          type: Directory

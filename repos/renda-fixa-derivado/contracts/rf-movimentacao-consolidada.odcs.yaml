@@ -1,0 +1,85 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Output Port: investments.renda_fixa.silver_movimentacao
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-rf-movimentacao-consolidada"
+info:
+  title: "Contrato de Dados - Movimentação Consolidada de Renda Fixa (Silver)"
+  version: "2.0.0"
+  status: "active"
+  description: >
+    Contrato que unifica as movimentações granulares de CDB e CRA na camada Silver.
+  owner: "squad-renda-fixa-core"
+  contact:
+    name: "Rodrigo Lima (Staff Data Engineer)"
+    email: "rodrigo.lima@banco.com.br"
+
+domain: "Investimentos"
+quantumName: "RENDA_FIXA_DERIVADO"
+
+models:
+  - table: "investments.renda_fixa.silver_movimentacao"
+    description: "Extrato unificado de movimentações de produtos de Renda Fixa."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_movimentacao_unificada"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Identificador global único da movimentação."
+        businessGlossaryTerm: "investments.glossary.IdentificadorMovimentacao"
+
+      - name: "dt_movimentacao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data em que a operação financeira foi realizada."
+        businessGlossaryTerm: "investments.glossary.DataMovimentacao"
+
+      - name: "id_cliente"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        classification: "PII"
+        description: "ID do investidor titular."
+        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+
+      - name: "tp_produto"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["CDB", "CRA"]
+        description: "Produto de investimento."
+        businessGlossaryTerm: "investments.glossary.TipoProdutoRendaFixa"
+
+      - name: "tp_operacao_macro"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["APORTE", "RESGATE", "RENDIMENTO"]
+        description: "Classificação padronizada da natureza da transação."
+        businessGlossaryTerm: "investments.glossary.TipoMovimentacao"
+
+      - name: "vl_movimentacao"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(18,2)"
+        nullable: false
+        description: "Valor líquido transacionado."
+        businessGlossaryTerm: "investments.glossary.ValorMovimentado"
+
+quality:
+  - type: "custom"
+    name: "check_movimentacao_positiva"
+    rule: "vl_movimentacao > 0"
+    severity: "critical"
+
+servicelevels:
+  availability:
+    percentage: 99.95
+  freshness:
+    cron: "0 7 * * 1-5"
+    timezone: "UTC"

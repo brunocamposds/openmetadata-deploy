@@ -1,0 +1,120 @@
+# ==============================================================================
+# Open Data Product Standard (ODPS) - v4.1
+# Produto de Dados: SIST_CDB (Source-Aligned)
+# ==============================================================================
+schema: "https://opendataproducts.org/v4.1/schema/odps.json"
+version: "4.1"
+
+# Informações de Negócio e Domínio
+domain: "Investimentos"
+subDomain: "Emissões Bancárias"
+
+# Especificação Oficial do Produto de Dados (ODPS v4.1)
+product:
+  details:
+    en:
+      name: "SIST_CDB"
+      productID: "SIST_CDB"
+      version: "1.2.0"
+      visibility: "public"
+      status: "development"
+      type: "raw data"
+      description: >
+        Produto de dados Source-Aligned responsável pela captura, conformidade e disponibilização 
+        das posições de custódia e histórico de movimentações financeiras de Certificados de Depósito 
+        Bancário (CDB). Gerencia as camadas Bronze (ingestão raw) e Silver (posições granulares diárias 
+        e eventos de movimentação padronizados).
+      categories:
+        - "Investimentos"
+        - "Renda Fixa"
+        - "CDB"
+        - "Emissoes Bancarias"
+
+  dataHolder:
+    legalName: "Squad Renda Fixa Emissões"
+    businessDomain: "Investimentos"
+    description: "Time proprietário e responsável pela engenharia e ciclo de vida do SIST_CDB."
+    contactEmail: "squad-rendafixa-emissoes@banco.com.br"
+
+  productStrategy:
+    objectives:
+      - "Garantir captura e conformidade diária de 100% das posições de CDB emitidas pelo banco."
+      - "Disponibilizar camadas analíticas no DuckDB Server em formato Apache Iceberg para consumo de produtos derivados."
+
+# Responsabilidades e Times (Governança Interna)
+team:
+  id: "squad-cdb"
+  name: "Squad Renda Fixa Emissões"
+  email: "squad-rendafixa-emissoes@banco.com.br"
+  slackChannel: "#squad-cdb-data"
+  role: "Data Product Owner Team"
+
+owners:
+  - id: "ana.silva"
+    name: "Ana Silva"
+    email: "ana.silva@banco.com.br"
+    role: "Data Product Owner"
+  - id: "carlos.mendes"
+    name: "Carlos Mendes"
+    email: "carlos.mendes@banco.com.br"
+    role: "Lead Data Engineer"
+
+# Portas de Entrada (Input Ports - Origem do Sistema Transacional Oracle Core)
+inputPorts:
+  - id: "inp-cdb-core-replica"
+    name: "Replicação Transacional Core CDB"
+    type: "database-cdc"
+    sourceSystem: "SIST_CDB_ORACLE_CORE"
+    technology: "Oracle GoldenGate / Debezium"
+    frequency: "streaming-microbatch-15min"
+    description: "Captura de alterações nas tabelas relacionais de contratos de CDB e lançamentos de extrato."
+
+# Portas de Saída (Output Ports - Camadas Silver no DuckDB Server / Iceberg)
+outputPorts:
+  - id: "out-cdb-silver-posicao"
+    name: "Posição Diária de CDBs Granular"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_posicao"
+    fullyQualifiedName: "investments.cdb.silver_posicao"
+    classification: "internal-confidential"
+    contract: "contracts/cdb-posicao.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D+1 até 06:00 UTC"
+      freshnessHours: 24
+
+  - id: "out-cdb-silver-movimentacao"
+    name: "Movimentações Financeiras de CDBs"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_movimentacao"
+    fullyQualifiedName: "investments.cdb.silver_movimentacao"
+    classification: "internal-confidential"
+    contract: "contracts/cdb-movimentacao.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D+1 até 06:00 UTC"
+      freshnessHours: 24
+
+# Contratos de Dados Associados (ODCS)
+contracts:
+  - id: "contract-cdb-posicao"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/cdb-posicao.odcs.yaml"
+  - id: "contract-cdb-movimentacao"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/cdb-movimentacao.odcs.yaml"
+
+# Políticas de Governança, Retenção e Billing
+governance:
+  classification: "Restrito"
+  compliance:
+    - "LGPD"
+    - "BACEN-4658"
+  retentionYears: 5
+  billingCostCenter: "CC-INVEST-10442"
