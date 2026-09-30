@@ -1,6 +1,6 @@
 # Makefile de automação para deploy do OpenMetadata no K3s (WSL Ubuntu)
 
-.PHONY: init plan apply destroy port-forward deploy-cdb deploy-cra deploy-derivado deploy-all status stop start build-runner job-cdb job-cra job-derivado job-status job-logs-cdb job-logs-cra job-logs-derivado help
+.PHONY: init plan apply destroy port-forward deploy-cdb deploy-cra deploy-derivado deploy-all status stop start build-runner job-cdb job-cra job-derivado job-status job-logs-cdb job-logs-cra job-logs-derivado reset help
 
 help:
 	@echo "Comandos disponíveis:"
@@ -12,6 +12,7 @@ help:
 	@echo "  make stop             - Hiberna os serviços (0% CPU/RAM) preservando os dados"
 	@echo "  make start            - Retoma todos os serviços rapidamente com dados salvos"
 	@echo "  make port-forward     - Abre túnel para acessar http://localhost:8585 no navegador"
+	@echo "  make reset            - Limpa todo o catálogo do OM, DuckDB e MongoDB (volta ao estado recém-instalado)"
 	@echo "  make destroy          - Remove os recursos criados pelo Terraform"
 	@echo ""
 	@echo "  --- Governança as Code (Marketplace & Contratos no OpenMetadata) ---"
@@ -132,6 +133,10 @@ job-logs-cra:
 
 job-logs-derivado:
 	kubectl logs -l app=pipeline-renda-fixa -n openmetadata --tail=50 -f
+
+reset:
+	@echo "Executando limpeza completa do catálogo do OpenMetadata e bancos de dados..."
+	python3 -u scripts/reset_openmetadata.py
 
 destroy:
 	cd terraform && terraform destroy -auto-approve
