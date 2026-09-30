@@ -254,9 +254,42 @@ def run_silver_transformation(conn):
         ON CONFLICT (id_movimentacao) DO NOTHING;
     """)
 
+    # 2.3 Silver Certificado (Cadastro de Certificados - Tabela Solitária de Exemplo)
+    cert_seed = SEEDS_DIR / "cdb_certificado_seed.csv"
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS cdb.silver_certificado (
+            id_certificado VARCHAR(50),
+            cd_tipo_certificado VARCHAR(30) NOT NULL,
+            nm_emissor VARCHAR(100) NOT NULL,
+            dt_emissao DATE NOT NULL,
+            dt_vencimento DATE NOT NULL,
+            tx_juros_anual NUMERIC(8,4) NOT NULL,
+            st_ativo BOOLEAN NOT NULL,
+            dh_registro_utc TIMESTAMP NOT NULL
+        );
+    """)
+
+    cur.execute("TRUNCATE TABLE cdb.silver_certificado;")
+    if cert_seed.exists():
+        with open(cert_seed, 'r', encoding='utf-8') as f:
+            lines = f.readlines()[1:]
+            for line in lines:
+                parts = [p.strip() for p in line.strip().split(',')]
+                if len(parts) >= 8:
+                    id_cert = parts[0] if parts[0] != '' else None
+                    cur.execute("""
+                        INSERT INTO cdb.silver_certificado (
+                            id_certificado, cd_tipo_certificado, nm_emissor,
+                            dt_emissao, dt_vencimento, tx_juros_anual,
+                            st_ativo, dh_registro_utc
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (id_cert, parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7]))
+
     cur.execute("SELECT COUNT(*) FROM cdb.silver_posicao;")
     c_pos = cur.fetchone()[0]
-    print(f">>> [SIST_CDB] Silver concluída! Registros na silver_posicao: {c_pos}")
+    cur.execute("SELECT COUNT(*) FROM cdb.silver_certificado;")
+    c_cert = cur.fetchone()[0]
+    print(f">>> [SIST_CDB] Silver concluída! Registros: {c_pos} posições, {c_cert} certificados cadastrados.")
 
 def run_quality_checks_and_observability(conn):
     print("\n--- 3. Execução dos Testes de Qualidade ODCS & Observabilidade ---")
@@ -289,6 +322,28 @@ def run_quality_checks_and_observability(conn):
     passed = (violations == 0)
     msg = f"Movimentações com valores estritamente positivos" if passed else f"{violations} lançamentos com valor zerado/negativo!"
     publish_test_result_to_om("check_valor_movimentacao_positivo", "investments.cdb.silver_movimentacao", passed, msg, violations)
+
+    # Teste 5: check_id_certificado_not_null (ALERTA DE OBSERVABILIDADE - SIMULAÇÃO DE ANOMALIA)
+    cur.execute("SELECT COUNT(*) FROM cdb.silver_certificado WHERE id_certificado IS NULL OR id_certificado = '';")
+    violations = cur.fetchone()[0]
+    passed = (violations == 0)
+    msg = f"0 violações encontradas" if passed else f"ALERTA CRÍTICO: {violations} certificado(s) com 'id_certificado' NULO/VAZIO violando o contrato ODCS!"
+    publish_test_result_to_om("check_id_certificado_not_null", "investments.cdb.silver_certificado", passed, msg, violations)
+
+    # Teste 6: check_dt_vencimento_valida
+    cur.execute("SELECT COUNT(*) FROM cdb.silver_certificado WHERE dt_vencimento < dt_emissao;")
+    violations = cur.fetchone()[0]
+    passed = (violations == 0)
+    msg = f"Vencimentos válidos (>= emissão)" if passed else f"{violations} certificados com vencimento anterior à emissão!"
+    publish_test_result_to_om("check_dt_vencimento_valida", "investments.cdb.silver_certificado", passed, msg, violations)
+
+    # Teste 7: check_taxa_positiva
+    cur.execute("SELECT COUNT(*) FROM cdb.silver_certificado WHERE tx_juros_anual <= 0;")
+    violations = cur.fetchone()[0]
+    passed = (violations == 0)
+    msg = f"Taxas de remuneração estritamente positivas" if passed else f"{violations} certificados com taxa zerada ou negativa!"
+    publish_test_result_to_om("check_taxa_positiva", "investments.cdb.silver_certificado", passed, msg, violations)
+
 
 def main():
     print("=" * 65)

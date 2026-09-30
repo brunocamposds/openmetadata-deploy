@@ -15,20 +15,21 @@ product:
     en:
       name: "SIST_CDB"
       productID: "SIST_CDB"
-      version: "1.2.0"
+      version: "1.3.0"
       visibility: "public"
       status: "development"
       type: "raw data"
       description: >
         Produto de dados Source-Aligned responsável pela captura, conformidade e disponibilização 
-        das posições de custódia e histórico de movimentações financeiras de Certificados de Depósito 
-        Bancário (CDB). Gerencia as camadas Bronze (ingestão raw) e Silver (posições granulares diárias 
-        e eventos de movimentação padronizados).
+        das posições de custódia, histórico de movimentações financeiras e cadastro mestre de Certificados 
+        de Depósito Bancário (CDB). Gerencia as camadas Bronze (ingestão raw) e Silver (posições granulares 
+        diárias, eventos de movimentação e cadastro isolado de certificados).
       categories:
         - "Investimentos"
         - "Renda Fixa"
         - "CDB"
         - "Emissoes Bancarias"
+        - "Certificados"
 
   dataHolder:
     legalName: "Squad Renda Fixa Emissões"
@@ -38,7 +39,7 @@ product:
 
   productStrategy:
     objectives:
-      - "Garantir captura e conformidade diária de 100% das posições de CDB emitidas pelo banco."
+      - "Garantir captura e conformidade diária de 100% das posições e cadastros de CDB emitidas pelo banco."
       - "Disponibilizar camadas analíticas no DuckDB Server em formato Apache Iceberg para consumo de produtos derivados."
 
 # Responsabilidades e Times (Governança Interna)
@@ -101,6 +102,21 @@ outputPorts:
       latency: "D+1 até 06:00 UTC"
       freshnessHours: 24
 
+  - id: "out-cdb-silver-certificado"
+    name: "Cadastro de Certificados de CDB"
+    type: "sql-table"
+    protocol: "iceberg"
+    platform: "duckdb"
+    format: "Iceberg"
+    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_certificado"
+    fullyQualifiedName: "investments.cdb.silver_certificado"
+    classification: "internal-confidential"
+    contract: "contracts/cdb-certificado.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D+1 até 06:00 UTC"
+      freshnessHours: 24
+
 # Contratos de Dados Associados (ODCS)
 contracts:
   - id: "contract-cdb-posicao"
@@ -109,6 +125,10 @@ contracts:
   - id: "contract-cdb-movimentacao"
     specification: "ODCS-v3.0.0"
     path: "contracts/cdb-movimentacao.odcs.yaml"
+  - id: "contract-cdb-certificado"
+    specification: "ODCS-v3.0.0"
+    path: "contracts/cdb-certificado.odcs.yaml"
+
 
 # Políticas de Governança, Retenção e Billing
 governance:

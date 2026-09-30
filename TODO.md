@@ -52,6 +52,13 @@ As seguintes melhorias foram incorporadas no script central [`scripts/deploy_dat
 - [x] Esteira de promoção para Produção testada e homologada via `make approve-cdb` (Status: `Approved`, Fase: `PRODUCTION`, Contratos: `active`).
 - [x] **Execução da Carga**: Pipeline disparado no cluster K3s com sucesso (`make job-cdb`). Tabelas `investments.cdb.silver_posicao` (6 linhas) e `investments.cdb.silver_movimentacao` (6 linhas) gravadas no DuckDB Server.
 - [x] **Validação de Observabilidade**: Testes ODCS reportados com sucesso para a API do OpenMetadata (`POST /v1/dataQuality/testCases/testCaseResults`). Cobertura ativa na UI com 100% de sucesso (3 testes em `silver_posicao` e 2 testes em `silver_movimentacao`).
+- [x] **Nova Release 1.3.0 (Tabela Solitária `silver_certificado` e Alerta de Observabilidade)**:
+  - Branch de feature dedicada: `feature/sist-cdb-observability-alert`.
+  - Contrato ODCS `cdb-certificado.odcs.yaml` com regras de qualidade (`check_id_certificado_not_null`, `check_dt_vencimento_valida`, `check_taxa_positiva`).
+  - Atualização do ODPS `data-product.odps.yaml` para versão `1.3.0` adicionando porta de saída `out-cdb-silver-certificado`.
+  - Ingestão de seed com registro nulo intencional em `cdb_certificado_seed.csv` (1 registro com `id_certificado` vazio).
+  - Configuração automática do alerta de observabilidade `DataQualityObservabilityAlert` no OpenMetadata para a squad/admins via `ActivityFeed` no evento `Failed`.
+  - Execução validada: `check_id_certificado_not_null` reporta status `Failed` no OpenMetadata com aviso crítico, demonstrando o disparo do alerta na interface.
 
 ---
 

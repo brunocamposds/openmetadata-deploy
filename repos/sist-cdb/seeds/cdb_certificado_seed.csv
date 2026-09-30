@@ -1,0 +1,6 @@
+id_certificado,cd_tipo_certificado,nm_emissor,dt_emissao,dt_vencimento,tx_juros_anual,st_ativo,dh_registro_utc
+CERT-CDB-2024-001,CDB_POS_CDI,Banco Alpha S.A.,2024-01-15,2027-01-15,108.5000,true,2024-01-15 09:00:00
+CERT-CDB-2024-002,CDB_PRE,Banco Beta S.A.,2024-03-10,2026-03-10,12.7500,true,2024-03-10 10:30:00
+CERT-CDB-2024-003,CDB_IPCA,Banco Gama S.A.,2024-06-01,2029-06-01,6.5000,true,2024-06-01 14:00:00
+,CDB_POS_CDI,Banco Delta S.A.,2024-08-20,2027-08-20,105.0000,true,2024-08-20 11:15:00
+CERT-CDB-2024-005,CDB_PRE,Banco Epsilon S.A.,2024-09-05,2026-09-05,11.9000,true,2024-09-05 16:45:00

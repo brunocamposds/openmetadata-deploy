@@ -127,6 +127,46 @@ class OpenMetadataClient:
         resp = requests.delete(url, headers=self.headers, timeout=120)
         return resp.status_code in (200, 204)
 
+    def ensure_observability_alert(self):
+        """Garante que a Subscription de Alerta de Observabilidade no Activity Feed para Admins existe e está ativa."""
+        payload = {
+            "name": "DataQualityObservabilityAlert",
+            "displayName": "Data Quality Observability Alerts",
+            "description": "Dispara alertas e notificacoes no Activity Feed dos administradores quando um teste ODCS falha",
+            "alertType": "Observability",
+            "enabled": True,
+            "resources": ["testCase"],
+            "destinations": [
+                {
+                    "category": "Admins",
+                    "type": "ActivityFeed",
+                    "enabled": True
+                }
+            ],
+            "input": {
+                "filters": [],
+                "actions": [
+                    {
+                        "name": "GetTestCaseStatusUpdates",
+                        "effect": "include",
+                        "prefixCondition": "AND",
+                        "arguments": [
+                            {
+                                "name": "testResultList",
+                                "input": ["Failed"]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        try:
+            self.put("v1/events/subscriptions", payload)
+            print(f"  {GREEN}✔ Observability Alert Subscription ativa: DataQualityObservabilityAlert{RESET}")
+        except Exception as e:
+            print(f"  {YELLOW}Aviso: Nao foi possivel registrar o alerta de observabilidade: {e}{RESET}")
+
+
 
 def extract_iso_retention(odcs_data: dict, odps_data: dict) -> str:
     """Extrai período de retenção dos contratos ODCS/ODPS e formata como ISO-8601 (ex: P5Y)."""
@@ -326,8 +366,12 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
     print(f"\n{BOLD}{MAGENTA}{'='*80}{RESET}")
     print(f"{BOLD}{MAGENTA}   OpenMetadata CI/CD Pipeline - Governance as Code                         {RESET}")
     print(f"{BOLD}{MAGENTA}   Deploy de Produto de Dados via Contratos ODPS & ODCS                     {RESET}")
-    print(f"{BOLD}{MAGENTA}{'='*80}{RESET}")
     print(f"{BLUE}Repositório:{RESET} {BOLD}{repo_path}{RESET}")
+
+    # 0. Alertas de Observabilidade
+    print(f"\n{BOLD}{CYAN}>>> [Etapa 0] Verificando Regras de Alerta de Observabilidade (Data Quality)...{RESET}")
+    client.ensure_observability_alert()
+
     print(f"{BLUE}Manifesto ODPS:{RESET} {odps_file.name}")
 
     # 1. Carregar ODPS

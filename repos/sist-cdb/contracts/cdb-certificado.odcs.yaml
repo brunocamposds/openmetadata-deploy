@@ -1,0 +1,112 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.0.0
+# Dataset: investments.cdb.silver_certificado
+# ==============================================================================
+dataContractSpecification: "3.0.0"
+id: "odcs-cdb-silver-certificado"
+info:
+  title: "Contrato de Dados - Cadastro de Certificados de CDB"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato que rege o cadastro mestre e especificações de Certificados de Depósito 
+    Bancário (CDBs emitidos). Dataset isolado utilizado para inventário, precificação 
+    e conformidade de registro de instrumentos de renda fixa.
+  owner: "squad-cdb"
+  contact:
+    name: "Carlos Mendes (Lead Data Engineer)"
+    email: "carlos.mendes@banco.com.br"
+
+domain: "Investimentos"
+dataset: "silver_certificado"
+quantumName: "SIST_CDB"
+
+# Especificação do Schema
+models:
+  - table: "investments.cdb.silver_certificado"
+    description: "Tabela Silver isolada contendo o cadastro de certificados emitidos de CDB."
+    type: "table"
+    criticality: "high"
+    columns:
+      - name: "id_certificado"
+        logicalType: "string"
+        physicalType: "STRING"
+        primaryKey: true
+        nullable: false
+        unique: true
+        description: "Código identificador unificado do certificado/título emitido."
+        businessGlossaryTerm: "investments.glossary.CertificadoCDB"
+
+      - name: "cd_tipo_certificado"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        enum: ["CDB_POS_CDI", "CDB_PRE", "CDB_IPCA"]
+        description: "Tipo de indexação da remuneração do certificado."
+
+      - name: "nm_emissor"
+        logicalType: "string"
+        physicalType: "STRING"
+        nullable: false
+        description: "Razão social da instituição bancária emissora do CDB."
+
+      - name: "dt_emissao"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data em que o certificado foi emitido formalmente."
+
+      - name: "dt_vencimento"
+        logicalType: "date"
+        physicalType: "DATE"
+        nullable: false
+        description: "Data final de vencimento e resgate do certificado."
+
+      - name: "tx_juros_anual"
+        logicalType: "decimal"
+        physicalType: "DECIMAL(8,4)"
+        nullable: false
+        description: "Taxa anual contratada (% do CDI ou taxa fixa a.a.)."
+
+      - name: "st_ativo"
+        logicalType: "boolean"
+        physicalType: "BOOLEAN"
+        nullable: false
+        description: "Indicador booleano se o título está em circulação/ativo."
+
+      - name: "dh_registro_utc"
+        logicalType: "timestamp"
+        physicalType: "TIMESTAMP"
+        nullable: false
+        description: "Timestamp UTC de auditoria e registro no sistema."
+
+# Regras e Expectativas de Qualidade dos Dados (Data Quality)
+quality:
+  - type: "custom"
+    name: "check_id_certificado_not_null"
+    description: "O código identificador do certificado deve ser preenchido obrigatoriamente (não nulo e não vazio)."
+    rule: "id_certificado IS NOT NULL AND id_certificado <> ''"
+    severity: "critical"
+
+  - type: "custom"
+    name: "check_dt_vencimento_valida"
+    description: "A data de vencimento deve ser obrigatoriamente posterior ou igual à data de emissão."
+    rule: "dt_vencimento >= dt_emissao"
+    severity: "error"
+
+  - type: "custom"
+    name: "check_taxa_positiva"
+    description: "A taxa anual pactuada deve ser maior que zero."
+    rule: "tx_juros_anual > 0"
+    severity: "error"
+
+# Acordo de Nível de Serviço (SLA)
+servicelevels:
+  availability:
+    percentage: 99.9
+  freshness:
+    cron: "0 6 * * 1-5"
+    timezone: "UTC"
+  retention:
+    period: "5 years"
+    storageClass: "Local DuckDB / Iceberg Storage"
