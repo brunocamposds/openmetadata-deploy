@@ -421,6 +421,21 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
     team_id = team_resp["id"]
     print(f"  {GREEN}✔ Team: {team_display} ({team_name}) - ID: {team_id}{RESET}")
 
+    # Associar o usuário admin como membro da Squad para que receba notificações no sininho e atribuições
+    try:
+        user_info = client.get("v1/users/loggedInUser")
+        logged_uid = user_info.get("id")
+        if logged_uid and team_id:
+            team_detail = client.get(f"v1/teams/{team_id}?fields=users")
+            existing_user_ids = [u.get("id") for u in team_detail.get("users", [])]
+            if logged_uid not in existing_user_ids:
+                client.patch(f"v1/teams/{team_id}", [
+                    {"op": "add", "path": "/users/-", "value": {"id": logged_uid, "type": "user"}}
+                ])
+                print(f"  {GREEN}✔ Usuário {user_info.get('name')} associado como membro da {team_display}.{RESET}")
+    except Exception as ue:
+        print(f"  {YELLOW}Aviso ao associar usuário à squad: {ue}{RESET}")
+
     # 3. Registrar Serviços e Schemas
     print(f"\n{BOLD}{CYAN}>>> [Etapa 3] Registrando Serviços e Schemas de Armazenamento...{RESET}")
     

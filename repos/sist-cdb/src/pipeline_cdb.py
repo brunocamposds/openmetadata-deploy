@@ -101,13 +101,48 @@ def publish_test_result_to_om(test_name: str, table_fqn: str, passed: bool, mess
                 {"name": "rowCount", "value": str(row_count)}
             ]
         }
-        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        resp = requests.post(url, headers=headers, json=payload, timeout=60)
         if resp.status_code in (200, 201):
             print(f"    [OK] Alerta/Métrica registrada no OpenMetadata com sucesso!")
         else:
             print(f"    [Info] OM respondeu {resp.status_code}: {resp.text[:100]}")
     except Exception as e:
         print(f"    [Aviso] Falha de conexão com OM ao postar resultado: {e}")
+
+    # 3. Se o teste falhou, acionar incidente e notificação direta no Sininho do usuário admin
+    if not passed and OM_TOKEN:
+        try:
+            # 3.1 Atribuir o Incidente de Observabilidade ao admin no Incident Manager
+            inc_payload = {
+                "testCaseResolutionStatusType": "Assigned",
+                "testCaseReference": tc_fqn,
+                "severity": "Severity1",
+                "testCaseResolutionStatusDetails": {
+                    "assignee": {
+                        "name": "admin",
+                        "type": "user"
+                    }
+                }
+            }
+            requests.post(f"{OM_URL.rstrip('/')}/v1/dataQuality/testCases/testCaseIncidentStatus", headers=headers, json=inc_payload, timeout=30)
+        except Exception as ie:
+            pass
+
+        try:
+            # 3.2 Notificar no feed interno endereçado ao admin para acender o sininho (Notifications)
+            feed_payload = {
+                "about": f"<#E::table::{full_table_fqn}>",
+                "addressedTo": "<#E::user::admin>",
+                "message": f"<#E::user::admin> :rotating_light: **ALERTA CRÍTICO DE OBSERVABILIDADE [SIST_CDB]**: Violação de integridade no contrato ODCS da tabela `{table_fqn}`! O teste `{test_name}` falhou. Detalhes: {message}",
+                "type": "Conversation"
+            }
+            feed_res = requests.post(f"{OM_URL.rstrip('/')}/v1/feed", headers=headers, json=feed_payload, timeout=30)
+            if feed_res.status_code in (200, 201):
+                print(f"    [🔔 Sininho] Notificação de incidente gerada no feed do usuário admin!")
+            else:
+                print(f"    [Info feed] Status {feed_res.status_code}: {feed_res.text[:100]}")
+        except Exception as fe:
+            print(f"    [Aviso feed]: {fe}")
 
 def run_bronze_ingestion(conn):
     print("\n--- 1. Ingestão da Camada Bronze (SIST_CDB) ---")
