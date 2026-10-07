@@ -107,8 +107,8 @@ def reset_openmetadata_catalog(base_url, headers):
     except Exception as e:
         print(f"  {YELLOW}Aviso ao remover Test Cases: {e}{RESET}")
 
-    # 4. Deletar Serviços de Banco (DuckDB, MongoDB, Origens)
-    target_services = ["duckdb_server", "mongodb_k3s", "sist_cdb_oracle_core", "sist_cra_securitizadora_gateway"]
+    # 4. Deletar Serviços de Banco (ClickHouse, DuckDB, MongoDB, Origens)
+    target_services = ["clickhouse_server", "duckdb_server", "mongodb_k3s", "sist_cdb_oracle_core", "sist_cra_securitizadora_gateway"]
     for svc_name in target_services:
         try:
             svc = requests.get(f"{base_url}/v1/services/databaseServices/name/{svc_name}", headers=headers, timeout=10).json()
@@ -184,46 +184,36 @@ def reset_openmetadata_catalog(base_url, headers):
         print(f"  {YELLOW}Aviso ao limpar Feed: {e}{RESET}")
 
 
-def reset_duckdb_server():
-    print(f"\n{BOLD}{CYAN}>>> [2/5] Limpando Schemas no DuckDB Server (investments.duckdb)...{RESET}")
+def reset_clickhouse_server():
+    print(f"\n{BOLD}{CYAN}>>> [2/5] Limpando Bancos e Tabelas no ClickHouse Server (investments)...{RESET}")
     endpoints = [
-        ("duckdb-server.openmetadata.svc.cluster.local", 5433),
-        ("localhost", 5433)
+        "http://clickhouse-server.openmetadata.svc.cluster.local:8123",
+        "http://localhost:8123"
     ]
     connected = False
-    for host, port in endpoints:
+    for ep in endpoints:
         try:
-            conn = psycopg2.connect(
-                host=host,
-                port=port,
-                dbname="investments",
-                user="duckdb_user",
-                password="duckdb_password",
-                connect_timeout=3
-            )
-            conn.autocommit = True
-            cur = conn.cursor()
-            cur.execute("""
-                DROP SCHEMA IF EXISTS cdb CASCADE;
-                DROP SCHEMA IF EXISTS cra CASCADE;
-                DROP SCHEMA IF EXISTS renda_fixa CASCADE;
-            """)
-            conn.close()
-            print(f"  {GREEN}✔ Schemas 'cdb', 'cra' e 'renda_fixa' eliminados no DuckDB Server ({host}:{port}).{RESET}")
+            for db in ["cdb", "cra", "renda_fixa"]:
+                requests.post(
+                    f"{ep}/",
+                    data=f"DROP DATABASE IF EXISTS {db};",
+                    auth=("clickhouse_user", "clickhouse_password"),
+                    timeout=5
+                )
+            print(f"  {GREEN}✔ Databases 'cdb', 'cra' e 'renda_fixa' eliminados no ClickHouse Server ({ep}).{RESET}")
             connected = True
             break
         except Exception:
             continue
 
     if not connected:
-        # Fallback via kubectl exec se fora do cluster
         import subprocess
         try:
-            cmd = "kubectl exec -n openmetadata deployment/duckdb-server -- psql -U duckdb_user -d investments -p 5433 -c 'DROP SCHEMA IF EXISTS cdb CASCADE; DROP SCHEMA IF EXISTS cra CASCADE; DROP SCHEMA IF EXISTS renda_fixa CASCADE;'"
+            cmd = "kubectl exec -n openmetadata deployment/clickhouse-server -- clickhouse-client --user clickhouse_user --password clickhouse_password --query 'DROP DATABASE IF EXISTS cdb; DROP DATABASE IF EXISTS cra; DROP DATABASE IF EXISTS renda_fixa;'"
             subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"  {GREEN}✔ Schemas eliminados no DuckDB Server via kubectl exec.{RESET}")
+            print(f"  {GREEN}✔ Databases eliminados no ClickHouse Server via kubectl exec.{RESET}")
         except Exception as e:
-            print(f"  {YELLOW}Aviso ao resetar DuckDB: {e}{RESET}")
+            print(f"  {YELLOW}Aviso ao resetar ClickHouse: {e}{RESET}")
 
 
 def reset_mongodb_collections():
@@ -269,7 +259,7 @@ def main():
     print(f"{CYAN}Conectado à API do OpenMetadata em:{RESET} {BOLD}{base_url}{RESET}")
 
     reset_openmetadata_catalog(base_url, headers)
-    reset_duckdb_server()
+    reset_clickhouse_server()
     reset_mongodb_collections()
     clean_k8s_jobs()
     reindex_opensearch(base_url, headers)

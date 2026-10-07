@@ -38,7 +38,7 @@ As seguintes melhorias foram incorporadas no script central [`scripts/deploy_dat
 
 - [x] **Identidade Visual e Tipagem Correta de Serviços de Banco**:
   - **Origens Transacionais**: Identificação e registro com `serviceType: "Oracle"` (ícone vermelho nativo da Oracle) ou `serviceType: "Db2"` (ícone IBM Db2), em vez do padrão genérico Postgres.
-  - **DuckDB Server**: Migração do serviço de `Postgres` para `CustomDatabase` nativo (`metadata.ingestion.source.database.customdatabase.metadata.CustomDatabaseSource`), com `displayName: "DuckDB Server"` e customização visual via `style: {"iconURL": "https://duckdb.org/images/favicon/apple-touch-icon.png", "color": "#FFF100"}` para exibir o logotipo oficial do DuckDB no OpenMetadata.
+  - **ClickHouse Server**: Registro com conector nativo oficial `serviceType: "Clickhouse"`, `scheme: "clickhouse+http"`, `hostPort: "clickhouse-server:8123"`, exibindo o logotipo oficial nativo do ClickHouse no OpenMetadata.
 
 ## 2. Status por Repositório
 
@@ -96,13 +96,13 @@ As seguintes melhorias foram incorporadas no script central [`scripts/deploy_dat
 
 ---
 
-### 2.4 Interface Web DuckDB (CloudBeaver)
-- [x] **Configuração e Homologação do CloudBeaver para DuckDB**:
+### 2.4 Interface Web ClickHouse (CloudBeaver)
+- [x] **Configuração e Homologação do CloudBeaver para ClickHouse**:
   - Configuração do ConfigMap `cloudbeaver-config` com permissões pré-definidas (`data-sources-permissions.json`), `initial-data.conf` e `initial-data-sources.conf`.
+  - Driver nativo ClickHouse JDBC (`clickhouse_jdbc`) configurado para `jdbc:clickhouse://clickhouse-server:8123/investments`.
   - Habilitação de acesso anônimo compartilhado via `CLOUDBEAVER_APP_GRANT_CONNECTIONS_ACCESS_TO_ANONYMOUS_TEAM="true"` e `anonymousAccessEnabled: true`.
-  - Provisionamento determinístico via `init_container` (`init-cloudbeaver-config`) para garantir persistência no PVC.
-  - Conexão pré-configurada ao `DuckDB Server (pg_duckdb)` via protocolo PostgreSQL (`jdbc:postgresql://duckdb-server:5433/investments`).
-  - Validação end-to-end: navegação completa nas árvores de metadados dos schemas `cdb`, `cra` e `renda_fixa`, e execução de consultas SQL analíticas em `http://localhost:8978`.
+  - Provisionamento determinístico via `init_container` (`init-cloudbeaver-config`) para persistência no PVC.
+  - Conexão pré-configurada ao `ClickHouse Server` em `http://localhost:8978`.
 
 ---
 

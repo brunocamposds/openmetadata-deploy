@@ -40,7 +40,7 @@ product:
   productStrategy:
     objectives:
       - "Garantir captura e conformidade diária de 100% das posições e cadastros de CDB emitidas pelo banco."
-      - "Disponibilizar camadas analíticas no DuckDB Server em formato Apache Iceberg para consumo de produtos derivados."
+      - "Disponibilizar camadas analíticas no ClickHouse Server em formato colunar para consumo de produtos derivados."
 
 # Responsabilidades e Times (Governança Interna)
 team:
@@ -70,15 +70,15 @@ inputPorts:
     frequency: "streaming-microbatch-15min"
     description: "Captura de alterações nas tabelas relacionais de contratos de CDB e lançamentos de extrato."
 
-# Portas de Saída (Output Ports - Camadas Silver no DuckDB Server / Iceberg)
+# Portas de Saída (Output Ports - Camadas Silver no ClickHouse Server)
 outputPorts:
   - id: "out-cdb-silver-posicao"
     name: "Posição Diária de CDBs Granular"
     type: "sql-table"
-    protocol: "iceberg"
-    platform: "duckdb"
-    format: "Iceberg"
-    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_posicao"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cdb.silver_posicao"
     fullyQualifiedName: "investments.cdb.silver_posicao"
     classification: "internal-confidential"
     contract: "contracts/cdb-posicao.odcs.yaml"
@@ -90,10 +90,10 @@ outputPorts:
   - id: "out-cdb-silver-movimentacao"
     name: "Movimentações Financeiras de CDBs"
     type: "sql-table"
-    protocol: "iceberg"
-    platform: "duckdb"
-    format: "Iceberg"
-    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_movimentacao"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cdb.silver_movimentacao"
     fullyQualifiedName: "investments.cdb.silver_movimentacao"
     classification: "internal-confidential"
     contract: "contracts/cdb-movimentacao.odcs.yaml"
@@ -105,10 +105,10 @@ outputPorts:
   - id: "out-cdb-silver-certificado"
     name: "Cadastro de Certificados de CDB"
     type: "sql-table"
-    protocol: "iceberg"
-    platform: "duckdb"
-    format: "Iceberg"
-    storageLocation: "data/duckdb/investments.duckdb:investments.cdb.silver_certificado"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cdb.silver_certificado"
     fullyQualifiedName: "investments.cdb.silver_certificado"
     classification: "internal-confidential"
     contract: "contracts/cdb-certificado.odcs.yaml"

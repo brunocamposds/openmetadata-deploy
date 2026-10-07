@@ -13,6 +13,9 @@ O ambiente é provisionado via Terraform em namespace isolado no Kubernetes (`op
 * **OpenMetadata Server (v2.0.2)**: Aplicação web e REST API.
 * **PostgreSQL (18.x)**: Armazenamento relacional de metadados estruturados, usuários, roles e entidades.
 * **OpenSearch (2.x)**: Mecanismo de busca e indexação textual/vetorial dos metadados.
+* **ClickHouse Server (24.x)**: Banco colunar analítico de alta performance nativamente integrado ao OpenMetadata (`serviceType: Clickhouse`).
+* **CloudBeaver Web UI**: Interface visual web para consultas SQL analíticas no ClickHouse (`http://localhost:8978`).
+* **MongoDB (7.x)**: Serving Store operacional para canais digitais (`mongodb://localhost:27017`).
 * **DataOps Pipeline**: Scripts de seed e automação de Data Products, contratos e linhagem ponta a ponta.
 
 ---
@@ -35,7 +38,7 @@ Todos os comandos de automação estão consolidados no `Makefile`:
 make init
 make apply
 ```
-> O provisionamento executa a criação do PostgreSQL, OpenSearch e do OpenMetadata Server. O cold-start inicial do OpenMetadata realiza a migração do banco e a criação de todos os índices no OpenSearch (processo monitorado pelo probe ajustado).
+> O provisionamento executa a criação do PostgreSQL, OpenSearch, ClickHouse Server, CloudBeaver, MongoDB e do OpenMetadata Server.
 
 ### 2. Verificar o status dos componentes
 ```bash
@@ -44,23 +47,23 @@ make status
 
 ### 3. Acessar a interface Web
 
-Graças ao Ingress integrado com o **Traefik**, o OpenMetadata pode ser acessado diretamente sem necessidade de túneis manuais:
-* **Acesso direto (Recomendado)**: [http://localhost](http://localhost)
-* **Acesso via domínio local**: [http://openmetadata.local](http://openmetadata.local) *(requer adicionar `127.0.0.1 openmetadata.local` no arquivo de hosts do Windows)*
-* *(Opcional via port-forward)*: `make port-forward` para abrir túnel em [http://localhost:8585](http://localhost:8585)
+Graças ao Ingress integrado com o **Traefik**, os serviços podem ser acessados diretamente:
+* **OpenMetadata UI**: [http://localhost](http://localhost) (ou [http://localhost:8585](http://localhost:8585))
+* **ClickHouse Web UI (CloudBeaver)**: [http://localhost:8978](http://localhost:8978)
+* **MongoDB Compass**: `mongodb://localhost:27017`
 
 #### Credenciais de Acesso Inicial:
-* **E-mail:** `admin@open-metadata.org`
-* **Senha:** `admin`
+* **OpenMetadata:** `admin@open-metadata.org` / `admin`
+* **ClickHouse:** `clickhouse_user` / `clickhouse_password` (Database: `investments`)
 
 ---
 
 ## 📦 Produtos e Contratos de Dados (DataOps & Governance as Code)
 
 O projeto contém três repositórios simulados em arquitetura Data Mesh (`repos/`):
-* **`repos/sist-cdb`** (*Source-Aligned*): Emissão e posições diárias de CDBs no Azure Databricks Unity Catalog (`investments.cdb.*`), regidos pelos contratos ODCS `cdb-posicao.odcs.yaml` e `cdb-movimentacao.odcs.yaml`.
-* **`repos/sist-cra`** (*Source-Aligned*): Securitização de Agronegócio no Azure Databricks Unity Catalog (`investments.cra.*`), regidos pelos contratos ODCS `cra-posicao.odcs.yaml` e `cra-movimentacao.odcs.yaml`.
-* **`repos/renda-fixa-derivado`** (*Consumer-Aligned*): Visão consolidada de Renda Fixa unificando CDB e CRA, disponibilizando tabelas analíticas Silver/Gold no Databricks e Serving Store em MongoDB Atlas (`investments_serving.rf_customer_positions`), regidos pelos contratos `rf-posicao-consolidada.odcs.yaml`, `rf-movimentacao-consolidada.odcs.yaml` e `rf-mongo-canal.odcs.yaml`.
+* **`repos/sist-cdb`** (*Source-Aligned*): Emissão e posições diárias de CDBs no ClickHouse Server (`investments.cdb.*`), regidos pelos contratos ODCS `cdb-posicao.odcs.yaml` e `cdb-movimentacao.odcs.yaml`.
+* **`repos/sist-cra`** (*Source-Aligned*): Securitização de Agronegócio no ClickHouse Server (`investments.cra.*`), regidos pelos contratos ODCS `cra-posicao.odcs.yaml` e `cra-movimentacao.odcs.yaml`.
+* **`repos/renda-fixa-derivado`** (*Consumer-Aligned*): Visão consolidada de Renda Fixa unificando CDB e CRA, disponibilizando tabelas analíticas Silver/Gold no ClickHouse (`investments.renda_fixa.*`) e Serving Store em MongoDB Local (`investments_serving.rf_customer_positions`), regidos pelos contratos `rf-posicao-consolidada.odcs.yaml`, `rf-movimentacao-consolidada.odcs.yaml` e `rf-mongo-canal.odcs.yaml`.
 
 * **Executar a esteira de governança CI/CD por repositório:**
   ```bash

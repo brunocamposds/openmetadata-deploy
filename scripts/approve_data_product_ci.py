@@ -240,9 +240,9 @@ def approve_repository_product(repo_path_str: str, client: OpenMetadataClient):
             fqn = port.get("fullyQualifiedName", "")
             parts = fqn.split(".")
             if len(parts) >= 3:
-                om_tbl_fqn = f"duckdb_server.investments.{parts[1]}.{parts[2]}"
+                om_tbl_fqn = f"clickhouse_server.investments.{parts[1]}.{parts[2]}"
             else:
-                om_tbl_fqn = f"duckdb_server.investments.{fqn}"
+                om_tbl_fqn = f"clickhouse_server.investments.{fqn}"
             t_data = client.get(f"v1/tables/name/{om_tbl_fqn}")
             if t_data.get("id"):
                 assets.append({"id": t_data["id"], "type": "table", "fullyQualifiedName": om_tbl_fqn})

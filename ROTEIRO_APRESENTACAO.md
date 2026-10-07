@@ -14,7 +14,7 @@ make status
 Abra os seguintes painéis no seu navegador:
 - **OpenMetadata UI:** [http://localhost](http://localhost) (ou [http://localhost:8585](http://localhost:8585))
   - *Credenciais:* `admin@open-metadata.org` / `admin`
-- **CloudBeaver (DuckDB Web UI):** [http://localhost:8978](http://localhost:8978)
+- **CloudBeaver (ClickHouse Web UI):** [http://localhost:8978](http://localhost:8978)
 - **MongoDB Compass (opcional):** `mongodb://localhost:27017`
 
 ---
@@ -29,10 +29,10 @@ make reset
 
 > **O que o `make reset` faz:**
 > 1. Remove todos os Data Products, Contratos ODCS e Testes de Qualidade da API do OpenMetadata.
-> 2. Deleta os serviços de banco (`duckdb_server`, `mongodb_k3s`, origens transacionais).
+> 2. Deleta os serviços de banco (`clickhouse_server`, `mongodb_k3s`, origens transacionais).
 > 3. Deleta os domínios, subdomínios, glossários e times customizados.
 > 4. Limpa todas as notificações e histórico do **Sininho / Activity Feed**.
-> 5. Limpa os schemas analíticos no DuckDB Server (`cdb`, `cra`, `renda_fixa`) e a base do MongoDB (`investments_serving`).
+> 5. Limpa os schemas analíticos no ClickHouse Server (`cdb`, `cra`, `renda_fixa`) e a base do MongoDB (`investments_serving`).
 > 6. Remove os pods de Jobs finalizados no Kubernetes.
 > 
 > *Tempo de execução: ~5 a 10 segundos (sem necessidade de reiniciar pods).*
@@ -72,15 +72,15 @@ make deploy-all
    - Destaque que todos nascem no estado **`Draft`** e fase **`DEVELOPMENT`** (Governança responsável).
 2. **Serviços de Banco Identificados:**
    - Acesse [Settings > Databases](http://localhost/settings/services/databases).
-   - O `DuckDB Server` exibe o logotipo oficial do DuckDB.
+   - O `ClickHouse Server` exibe o logotipo oficial nativo do ClickHouse.
    - As origens legadas exibem ícones nativos corporativos (Oracle e IBM Db2).
 3. **Contratos ODCS e Amostra de Dados (Sample Data):**
-   - Acesse a tabela [`silver_posicao`](http://localhost/table/duckdb_server.investments.cdb.silver_posicao).
+   - Acesse a tabela [`silver_posicao`](http://localhost/table/clickhouse_server.investments.cdb.silver_posicao).
    - Aba **Data Contract**: Contrato ODCS ativo em modo `Draft`, com schema estrito, SLA e regras de qualidade declaradas.
    - Aba **Sample Data**: Amostra tipada injetada automaticamente a partir dos arquivos de seed.
    - Tags de governança aplicadas: Squad proprietária (`owners`), camada (`Tier.Tier2`), certificação (`Certification.Silver`) e retenção (`P5Y`).
 4. **Linhagem de Ponta a Ponta (Lineage):**
-   - Acesse a tabela [`gold_posicao_consolidada_cliente`](http://localhost/table/duckdb_server.investments.renda_fixa.gold_posicao_consolidada_cliente) e clique na aba **Lineage**.
+   - Acesse a tabela [`gold_posicao_consolidada_cliente`](http://localhost/table/clickhouse_server.investments.renda_fixa.gold_posicao_consolidada_cliente) e clique na aba **Lineage**.
    - Mostre o grafo completo:
      `Oracle / Db2 ➔ Silver CDB / CRA ➔ Silver RF ➔ Gold RF ➔ MongoDB Serving`.
 
@@ -105,7 +105,7 @@ make approve-all
 
 ### ATO 3: Execução dos Pipelines de Dados no Kubernetes
 
-Demonstre a execução real dos pipelines conteinerizados rodando como Jobs no K3s, populando as camadas Bronze, Silver e Gold no DuckDB Server e servindo para canais digitais no MongoDB.
+Demonstre a execução real dos pipelines conteinerizados rodando como Jobs no K3s, populando as camadas Bronze, Silver e Gold no ClickHouse Server e servindo para canais digitais no MongoDB.
 
 ```bash
 # 1. Executa a carga do CDB (Transacional -> Bronze -> Silver -> Testes ODCS)
@@ -127,7 +127,7 @@ make job-logs-derivado
 
 **O que demonstrar nos painéis:**
 1. **No CloudBeaver ([http://localhost:8978](http://localhost:8978)):**
-   - Abra a conexão `DuckDB Server (pg_duckdb)`.
+   - Abra a conexão `ClickHouse Server`.
    - Navegue pelos schemas `cdb`, `cra` e `renda_fixa`.
    - Execute uma query SQL mostrando as posições consolidadas na Gold:
      ```sql
@@ -172,7 +172,7 @@ Demonstre como o Git gerencia o versionamento de contratos de dados e como o Ope
      - Acesse no menu lateral esquerdo: **Quality > Incident Manager** ([http://localhost/incident-manager](http://localhost/incident-manager)).
      - O incidente foi aberto automaticamente com severidade **Severity 1** e atribuído ao administrador.
    - **Tabela Física:**
-     - Acesse [`silver_certificado`](http://localhost/table/duckdb_server.investments.cdb.silver_certificado) > aba **Profiler & Data Quality**.
+     - Acesse [`silver_certificado`](http://localhost/table/clickhouse_server.investments.cdb.silver_certificado) > aba **Profiler & Data Quality**.
      - O teste `check_id_certificado_not_null` está destacado em **vermelho (Failed)** com a evidência de violação da regra contratual.
 
 ---
@@ -181,7 +181,7 @@ Demonstre como o Git gerencia o versionamento de contratos de dados e como o Ope
 
 | Momento | Comando | Finalidade |
 | :--- | :--- | :--- |
-| **Antes de começar** | `make reset` | Limpa todo o catálogo do OM, DuckDB e Mongo (estado zerado) |
+| **Antes de começar** | `make reset` | Limpa todo o catálogo do OM, ClickHouse e Mongo (estado zerado) |
 | **Ato 1: Deploy** | `make deploy-all` | Publica os 3 Data Products, Contratos ODCS, linhagem e amostras em *Draft* |
 | **Ato 2: Aprovação**| `make approve-all` | Promove todos os produtos para *Approved* / *PRODUCTION* |
 | **Ato 3: Carga K3s** | `make job-cdb` | Roda ingestão e DQ do CDB |

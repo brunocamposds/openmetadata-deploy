@@ -17,22 +17,22 @@ spec:
       restartPolicy: Never
       containers:
       - name: runner
-        image: duckdb-pipeline-runner:latest
+        image: pipeline-runner:latest
         imagePullPolicy: IfNotPresent
         command:
         - python
         - /app/repos/sist-cdb/src/pipeline_cdb.py
         env:
-        - name: DUCKDB_SERVER_HOST
-          value: "duckdb-server.openmetadata.svc.cluster.local"
-        - name: DUCKDB_SERVER_PORT
-          value: "5433"
-        - name: DUCKDB_DB
+        - name: CLICKHOUSE_SERVER_HOST
+          value: "clickhouse-server.openmetadata.svc.cluster.local"
+        - name: CLICKHOUSE_SERVER_PORT
+          value: "8123"
+        - name: CLICKHOUSE_DB
           value: "investments"
-        - name: DUCKDB_USER
-          value: "duckdb_user"
-        - name: DUCKDB_PASSWORD
-          value: "duckdb_password"
+        - name: CLICKHOUSE_USER
+          value: "clickhouse_user"
+        - name: CLICKHOUSE_PASSWORD
+          value: "clickhouse_password"
         - name: OPENMETADATA_URL
           value: "http://openmetadata.openmetadata.svc.cluster.local:8585/api"
         volumeMounts:

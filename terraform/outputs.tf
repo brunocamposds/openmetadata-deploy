@@ -13,16 +13,16 @@ Serviços disponíveis no cluster K3s e host Windows:
    - Usuário: admin@open-metadata.org
    - Senha: admin
 
-2. DuckDB Server (pg_duckdb - Postgres Protocol):
-   - Conexão local (DBeaver / OM): postgresql://duckdb_user:duckdb_password@localhost:5433/investments
-   - Conexão interna cluster: postgresql://duckdb_user:duckdb_password@duckdb-server.openmetadata.svc.cluster.local:5432/investments
+2. ClickHouse Server (Colunar Analítico Nativo):
+   - Conexão HTTP (OM / Python / curl): http://localhost:8123 (interno: http://clickhouse-server.openmetadata.svc.cluster.local:8123)
+   - Conexão Nativa (TCP): localhost:9000 (interno: clickhouse-server.openmetadata.svc.cluster.local:9000)
    - Database: investments
-   - Usuário: duckdb_user
-   - Senha: duckdb_password
+   - Usuário: clickhouse_user
+   - Senha: clickhouse_password
 
-3. DuckDB Web UI (CloudBeaver):
+3. ClickHouse Web UI (CloudBeaver):
    - URL: http://localhost:8978
-   - Conectado ao DuckDB Server via rede
+   - Conectado ao ClickHouse Server via JDBC
 
 4. MongoDB Serving Layer:
    - Conexão local (Compass / CLI): mongodb://localhost:27017

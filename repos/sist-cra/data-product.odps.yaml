@@ -39,7 +39,7 @@ product:
   productStrategy:
     objectives:
       - "Consolidar posições de custódia e movimentações de CRAs integradas com as securitizadoras parceiras."
-      - "Disponibilizar camadas Silver padronizadas no DuckDB Server em formato Apache Iceberg para produtos consumidores."
+      - "Disponibilizar camadas Silver padronizadas no ClickHouse Server em formato colunar para produtos consumidores."
 
 # Responsabilidades e Times (Governança Interna)
 team:
@@ -69,15 +69,15 @@ inputPorts:
     frequency: "daily-03:00-utc"
     description: "Carga diária de arquivos CNAB/XML padronizados enviados pelas securitizadoras parceiras."
 
-# Portas de Saída (Output Ports via DuckDB / Iceberg)
+# Portas de Saída (Output Ports via ClickHouse)
 outputPorts:
   - id: "out-cra-silver-posicao"
     name: "Posição Diária de CRAs Granular"
     type: "sql-table"
-    protocol: "iceberg"
-    platform: "duckdb"
-    format: "Iceberg"
-    storageLocation: "data/duckdb/investments.duckdb:investments.cra.silver_posicao"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cra.silver_posicao"
     fullyQualifiedName: "investments.cra.silver_posicao"
     classification: "internal-confidential"
     contract: "contracts/cra-posicao.odcs.yaml"
@@ -89,10 +89,10 @@ outputPorts:
   - id: "out-cra-silver-movimentacao"
     name: "Movimentações Financeiras de CRAs"
     type: "sql-table"
-    protocol: "iceberg"
-    platform: "duckdb"
-    format: "Iceberg"
-    storageLocation: "data/duckdb/investments.duckdb:investments.cra.silver_movimentacao"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cra.silver_movimentacao"
     fullyQualifiedName: "investments.cra.silver_movimentacao"
     classification: "internal-confidential"
     contract: "contracts/cra-movimentacao.odcs.yaml"

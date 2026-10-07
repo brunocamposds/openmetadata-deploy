@@ -439,53 +439,51 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
     # 3. Registrar Serviços e Schemas
     print(f"\n{BOLD}{CYAN}>>> [Etapa 3] Registrando Serviços e Schemas de Armazenamento...{RESET}")
     
-    # 3.1 DuckDB Server (CustomDatabase com ícone DuckDB)
-    # Se o serviço existir com serviceType incompatível (ex: Postgres), deleta para recriar
-    existing_duckdb = client.get("v1/services/databaseServices/name/duckdb_server")
-    if existing_duckdb.get("id") and existing_duckdb.get("serviceType") != "CustomDatabase":
-        print(f"  {YELLOW}⟳ Migrando duckdb_server de {existing_duckdb.get('serviceType')} → CustomDatabase...{RESET}")
-        client.delete(f"v1/services/databaseServices/{existing_duckdb['id']}?recursive=true&hardDelete=true")
+    # 3.1 ClickHouse Server (Conector Nativo Oficial serviceType: Clickhouse)
+    existing_ch = client.get("v1/services/databaseServices/name/clickhouse_server")
+    if existing_ch.get("id") and existing_ch.get("serviceType") != "Clickhouse":
+        print(f"  {YELLOW}⟳ Migrando clickhouse_server de {existing_ch.get('serviceType')} → Clickhouse...{RESET}")
+        client.delete(f"v1/services/databaseServices/{existing_ch['id']}?recursive=true&hardDelete=true")
     client.put("v1/services/databaseServices", {
-        "name": "duckdb_server",
-        "displayName": "DuckDB Server",
-        "serviceType": "CustomDatabase",
-        "description": "DuckDB Server Analítico no cluster K3s (pg_duckdb)",
-        "style": {
-            "iconURL": "https://duckdb.org/images/favicon/apple-touch-icon.png",
-            "color": "#FFF100"
-        },
+        "name": "clickhouse_server",
+        "displayName": "ClickHouse Server",
+        "serviceType": "Clickhouse",
+        "description": "ClickHouse Server Analítico no cluster K3s",
         "connection": {
             "config": {
-                "type": "CustomDatabase",
-                "sourcePythonClass": "metadata.ingestion.source.database.customdatabase.metadata.CustomDatabaseSource"
+                "type": "Clickhouse",
+                "scheme": "clickhouse+http",
+                "hostPort": "clickhouse-server:8123",
+                "username": "clickhouse_user",
+                "password": "clickhouse_password"
             }
         }
     })
     client.put("v1/databases", {
         "name": "investments",
-        "service": "duckdb_server",
-        "description": "Catálogo Analítico DuckDB de Investimentos"
+        "service": "clickhouse_server",
+        "description": "Catálogo Analítico ClickHouse de Investimentos"
     })
 
-    # Criar Schemas no DuckDB Server se existirem portas de saída analíticas
+    # Criar Schemas no ClickHouse Server se existirem portas de saída analíticas
     created_schemas = set()
     output_ports = odps.get("outputPorts", [])
     for port in output_ports:
         fqn = port.get("fullyQualifiedName", "")
         platform = port.get("platform", "")
-        if "duckdb" in platform or "iceberg" in platform or fqn.startswith("investments."):
+        if "clickhouse" in platform or "duckdb" in platform or "iceberg" in platform or fqn.startswith("investments."):
             parts = fqn.split(".")
             if len(parts) >= 3:
                 schema_name = parts[1]
                 if schema_name not in created_schemas:
                     client.put("v1/databaseSchemas", {
                         "name": schema_name,
-                        "database": "duckdb_server.investments",
-                        "description": f"Schema analítico {schema_name} no DuckDB Server",
+                        "database": "clickhouse_server.investments",
+                        "description": f"Schema analítico {schema_name} no ClickHouse Server",
                         "domains": [full_domain_fqn]
                     })
                     created_schemas.add(schema_name)
-                    print(f"  {GREEN}✔ DuckDB Schema: duckdb_server.investments.{schema_name}{RESET}")
+                    print(f"  {GREEN}✔ ClickHouse Schema: clickhouse_server.investments.{schema_name}{RESET}")
 
     # 3.2 MongoDB Serving Layer (se aplicável)
     has_mongo = any("mongo" in p.get("platform", "") or "mongo" in p.get("type", "") for p in output_ports)
@@ -617,7 +615,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
         odcs_models = odcs.get("models", [])
         for model in odcs_models:
             model_table_raw = model.get("table", "")
-            # Determinar se a tabela pertence a DuckDB ou MongoDB
+            # Determinar se a tabela pertence a ClickHouse ou MongoDB
             if "mongodb" in port.get("platform", "") or "document" in port.get("type", ""):
                 db_schema_fqn = "mongodb_k3s.investments_serving.collections"
                 table_name = model_table_raw.split(".")[-1]
@@ -629,7 +627,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
                 else:
                     schema_name = "silver"
                     table_name = parts[-1]
-                db_schema_fqn = f"duckdb_server.investments.{schema_name}"
+                db_schema_fqn = f"clickhouse_server.investments.{schema_name}"
 
             # Identificar chaves primárias
             pk_cols = [c.get("name") for c in model.get("columns", []) if c.get("primaryKey")]
@@ -950,7 +948,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
         upstream_fqn = inp.get("fullyQualifiedName")
         if upstream_fqn:
             parts = upstream_fqn.split(".")
-            om_upstream_fqn = f"duckdb_server.investments.{parts[1]}.{parts[2]}" if len(parts) >= 3 else f"duckdb_server.investments.{upstream_fqn}"
+            om_upstream_fqn = f"clickhouse_server.investments.{parts[1]}.{parts[2]}" if len(parts) >= 3 else f"clickhouse_server.investments.{upstream_fqn}"
             up_tbl = client.get(f"v1/tables/name/{om_upstream_fqn}")
             if up_tbl.get("id"):
                 input_assets.append({"id": up_tbl["id"], "type": "table"})
@@ -986,12 +984,12 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
         upstream_fqn = inp.get("fullyQualifiedName")
         if upstream_dp and upstream_fqn:
             # Buscar ID da tabela upstream no OpenMetadata
-            # O nome no DuckDB Server é duckdb_server.investments.<schema>.<table>
+            # O nome no ClickHouse Server é clickhouse_server.investments.<schema>.<table>
             parts = upstream_fqn.split(".")
             if len(parts) >= 3:
-                om_upstream_fqn = f"duckdb_server.investments.{parts[1]}.{parts[2]}"
+                om_upstream_fqn = f"clickhouse_server.investments.{parts[1]}.{parts[2]}"
             else:
-                om_upstream_fqn = f"duckdb_server.investments.{upstream_fqn}"
+                om_upstream_fqn = f"clickhouse_server.investments.{upstream_fqn}"
 
             up_table_obj = client.get(f"v1/tables/name/{om_upstream_fqn}")
             up_table_id = up_table_obj.get("id")
@@ -1010,10 +1008,10 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
 
     # Se for o produto derivado, conectar Silver -> Gold e Silver -> MongoDB
     if "derivado" in str(repo_path) or "consolidado" in dp_name.lower():
-        silver_pos = table_fqn_to_id.get("investments.renda_fixa.silver_posicao") or table_fqn_to_id.get("duckdb_server.investments.renda_fixa.silver_posicao")
-        silver_mov = table_fqn_to_id.get("investments.renda_fixa.silver_movimentacao") or table_fqn_to_id.get("duckdb_server.investments.renda_fixa.silver_movimentacao")
-        gold_pos = table_fqn_to_id.get("investments.renda_fixa.gold_saldo_investido") or table_fqn_to_id.get("duckdb_server.investments.renda_fixa.gold_saldo_investido")
-        gold_mov = table_fqn_to_id.get("investments.renda_fixa.gold_movimentacao_sumarizada") or table_fqn_to_id.get("duckdb_server.investments.renda_fixa.gold_movimentacao_sumarizada")
+        silver_pos = table_fqn_to_id.get("investments.renda_fixa.silver_posicao") or table_fqn_to_id.get("clickhouse_server.investments.renda_fixa.silver_posicao")
+        silver_mov = table_fqn_to_id.get("investments.renda_fixa.silver_movimentacao") or table_fqn_to_id.get("clickhouse_server.investments.renda_fixa.silver_movimentacao")
+        gold_pos = table_fqn_to_id.get("investments.renda_fixa.gold_saldo_investido") or table_fqn_to_id.get("clickhouse_server.investments.renda_fixa.gold_saldo_investido")
+        gold_mov = table_fqn_to_id.get("investments.renda_fixa.gold_movimentacao_sumarizada") or table_fqn_to_id.get("clickhouse_server.investments.renda_fixa.gold_movimentacao_sumarizada")
         mongo_out = table_fqn_to_id.get("mongodb_k3s.investments_serving.collections.rf_customer_positions")
 
         if silver_pos and gold_pos:
@@ -1034,7 +1032,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
     
     first_asset_fqn = None
     for k, v in table_fqn_to_id.items():
-        if k.startswith("duckdb_server") or k.startswith("mongodb_k3s"):
+        if k.startswith("clickhouse_server") or k.startswith("mongodb_k3s"):
             first_asset_fqn = k
             break
     if not first_asset_fqn and table_fqn_to_id:

@@ -17,6 +17,7 @@ WORKDIR /app
 
 # Instala dependências Python necessárias para os pipelines
 RUN pip install --no-cache-dir \
+    clickhouse-connect==0.8.10 \
     duckdb==1.5.6 \
     psycopg2-binary==2.9.13 \
     pymongo==4.18.2 \
@@ -26,11 +27,11 @@ RUN pip install --no-cache-dir \
     fastparquet==2026.9.0
 
 # Define variáveis de ambiente padrão internas do cluster K3s
-ENV DUCKDB_SERVER_HOST="duckdb-server.openmetadata.svc.cluster.local" \
-    DUCKDB_SERVER_PORT="5432" \
-    DUCKDB_DB="investments" \
-    DUCKDB_USER="duckdb_user" \
-    DUCKDB_PASSWORD="duckdb_password" \
+ENV CLICKHOUSE_SERVER_HOST="clickhouse-server.openmetadata.svc.cluster.local" \
+    CLICKHOUSE_SERVER_PORT="8123" \
+    CLICKHOUSE_DB="investments" \
+    CLICKHOUSE_USER="clickhouse_user" \
+    CLICKHOUSE_PASSWORD="clickhouse_password" \
     MONGODB_URI="mongodb://mongodb.openmetadata.svc.cluster.local:27017" \
     OPENMETADATA_URL="http://openmetadata.openmetadata.svc.cluster.local:8585/api" \
     PYTHONUNBUFFERED=1

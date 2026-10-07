@@ -1,6 +1,6 @@
 # ==============================================================================
-# CloudBeaver Web UI para DuckDB
-# Interface Web completa para visualização e execução de queries SQL no DuckDB
+# CloudBeaver Web UI para ClickHouse
+# Interface Web completa para visualização e execução de queries SQL no ClickHouse
 # Acessível via navegador em http://localhost:8978
 # ==============================================================================
 
@@ -114,43 +114,20 @@ resource "kubernetes_config_map" "cloudbeaver_config" {
     {
         "folders": {},
         "connections": {
-            "duckdb-server": {
-                "provider": "postgresql",
-                "driver": "postgres-jdbc",
-                "name": "DuckDB Server (pg_duckdb)",
-                "save-password": true,
-                "show-system-objects": true,
-                "read-only": false,
-                "configuration": {
-                    "host": "duckdb-server",
-                    "port": "5433",
-                    "database": "investments",
-                    "url": "jdbc:postgresql://duckdb-server:5433/investments?user=duckdb_user&password=duckdb_password",
-                    "user": "duckdb_user",
-                    "type": "dev",
-                    "auth-model": "native",
-                    "handlers": {},
-                    "properties": {
-                        "loginTimeout": "20",
-                        "connectTimeout": "20"
-                    },
-                    "provider-properties": {
-                        "@dbeaver-show-non-default-db@": "true",
-                        "@dbeaver-show-template-db@": "false",
-                        "@dbeaver-show-unavailable-db@": "false"
-                    }
-                }
-            },
-            "duckdb-embedded": {
+            "clickhouse-server": {
                 "provider": "generic",
-                "driver": "duckdb_jdbc",
-                "name": "DuckDB Local File (/data/duckdb)",
+                "driver": "clickhouse_jdbc",
+                "name": "ClickHouse Server",
                 "save-password": true,
                 "show-system-objects": true,
                 "read-only": false,
                 "configuration": {
-                    "database": "/data/duckdb/investments.duckdb",
-                    "url": "jdbc:duckdb:/data/duckdb/investments.duckdb",
+                    "host": "clickhouse-server",
+                    "port": "8123",
+                    "database": "investments",
+                    "url": "jdbc:clickhouse://clickhouse-server:8123/investments",
+                    "user": "clickhouse_user",
+                    "password": "clickhouse_password",
                     "type": "dev",
                     "auth-model": "native",
                     "handlers": {}
@@ -162,8 +139,7 @@ resource "kubernetes_config_map" "cloudbeaver_config" {
 
     "data-sources-permissions.json" = <<-EOT
     {
-        "duckdb-server": ["user", "admin"],
-        "duckdb-embedded": ["user", "admin"]
+        "clickhouse-server": ["user", "admin"]
     }
     EOT
   }
@@ -262,12 +238,6 @@ resource "kubernetes_deployment" "cloudbeaver" {
             sub_path   = "data-sources-permissions.json"
           }
 
-          volume_mount {
-            name       = "duckdb-data"
-            mount_path = "/data/duckdb"
-          }
-
-
           resources {
             limits = {
               cpu    = "1"
@@ -291,14 +261,6 @@ resource "kubernetes_deployment" "cloudbeaver" {
           name = "cloudbeaver-config-vol"
           config_map {
             name = kubernetes_config_map.cloudbeaver_config.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "duckdb-data"
-          host_path {
-            path = "/mnt/c/Users/bruno/Workspace/ai-data-engineer-workspace/ai-datagov-openmetadata-k8s/data/duckdb"
-            type = "DirectoryOrCreate"
           }
         }
       }

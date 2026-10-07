@@ -7,12 +7,12 @@ help:
 	@echo "  --- Infraestrutura & Cluster ---"
 	@echo "  make init             - Inicializa o Terraform e providers"
 	@echo "  make plan             - Gera plano de execução do Terraform"
-	@echo "  make apply            - Aplica todos os recursos (OpenMetadata, DuckDB Server, CloudBeaver, MongoDB)"
+	@echo "  make apply            - Aplica todos os recursos (OpenMetadata, ClickHouse Server, CloudBeaver, MongoDB)"
 	@echo "  make status           - Verifica os pods, serviços, PVCs e Ingress no namespace openmetadata"
 	@echo "  make stop             - Hiberna os serviços (0% CPU/RAM) preservando os dados"
 	@echo "  make start            - Retoma todos os serviços rapidamente com dados salvos"
 	@echo "  make port-forward     - Abre túnel para acessar http://localhost:8585 no navegador"
-	@echo "  make reset            - Limpa todo o catálogo do OM, DuckDB e MongoDB (volta ao estado recém-instalado)"
+	@echo "  make reset            - Limpa todo o catálogo do OM, ClickHouse e MongoDB (volta ao estado recém-instalado)"
 	@echo "  make destroy          - Remove os recursos criados pelo Terraform"
 	@echo ""
 	@echo "  --- Governança as Code (Marketplace & Contratos no OpenMetadata) ---"
@@ -48,7 +48,7 @@ stop:
 	@echo "Pausando todos os serviços (liberando RAM/CPU sem perder dados)..."
 	kubectl scale deployment openmetadata --replicas=0 -n openmetadata
 	kubectl scale deployment cloudbeaver --replicas=0 -n openmetadata
-	kubectl scale deployment duckdb-server --replicas=0 -n openmetadata
+	kubectl scale deployment clickhouse-server --replicas=0 -n openmetadata
 	kubectl scale deployment mongodb --replicas=0 -n openmetadata
 	@echo "Aguardando término das aplicações antes de desligar os bancos..."
 	@kubectl wait --namespace openmetadata --for=delete pod -l app.kubernetes.io/name=openmetadata --timeout=30s || true
@@ -63,7 +63,7 @@ start:
 	kubectl scale statefulset postgresql --replicas=1 -n openmetadata
 	kubectl scale statefulset opensearch --replicas=1 -n openmetadata
 	kubectl scale deployment mongodb --replicas=1 -n openmetadata
-	kubectl scale deployment duckdb-server --replicas=1 -n openmetadata
+	kubectl scale deployment clickhouse-server --replicas=1 -n openmetadata
 	kubectl scale deployment cloudbeaver --replicas=1 -n openmetadata
 	@echo "Aguardando PostgreSQL e OpenSearch..."
 	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
@@ -74,10 +74,10 @@ start:
 	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=600s
 	@echo "=================================================="
 	@echo "Serviços prontos para uso:"
-	@echo "  - OpenMetadata UI: http://localhost"
-	@echo "  - DuckDB Web UI:   http://localhost:8978"
-	@echo "  - MongoDB Compass: mongodb://localhost:27017"
-	@echo "  - DuckDB Server:   localhost:5433"
+	@echo "  - OpenMetadata UI:   http://localhost"
+	@echo "  - ClickHouse Web UI: http://localhost:8978"
+	@echo "  - MongoDB Compass:   mongodb://localhost:27017"
+	@echo "  - ClickHouse Server: http://localhost:8123"
 	@echo "=================================================="
 
 port-forward:
@@ -113,7 +113,7 @@ approve-derivado:
 approve-all: approve-cdb approve-cra approve-derivado
 
 build-runner:
-	docker build -t duckdb-pipeline-runner:latest docker/pipeline-runner
+	docker build -t pipeline-runner:latest -t duckdb-pipeline-runner:latest docker/pipeline-runner
 
 job-cdb:
 	@echo "Disparando Job K3s: SIST_CDB..."
