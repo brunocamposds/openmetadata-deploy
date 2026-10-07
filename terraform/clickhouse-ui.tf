@@ -115,8 +115,8 @@ resource "kubernetes_config_map" "cloudbeaver_config" {
         "folders": {},
         "connections": {
             "clickhouse-server": {
-                "provider": "generic",
-                "driver": "clickhouse_jdbc",
+                "provider": "clickhouse",
+                "driver": "com_clickhouse",
                 "name": "ClickHouse Server",
                 "save-password": true,
                 "show-system-objects": true,
