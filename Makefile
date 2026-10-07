@@ -1,6 +1,6 @@
 # Makefile de automação para deploy do OpenMetadata no K3s (WSL Ubuntu)
 
-.PHONY: init plan apply destroy port-forward deploy-cdb deploy-cra deploy-derivado deploy-all status stop start build-runner job-cdb job-cra job-derivado job-status job-logs-cdb job-logs-cra job-logs-derivado reset help
+.PHONY: init plan apply destroy port-forward deploy-cdb deploy-cra deploy-derivado deploy-all status stop pause start build-runner job-cdb job-cra job-derivado job-status job-logs-cdb job-logs-cra job-logs-derivado reset help
 
 help:
 	@echo "Comandos disponíveis:"
@@ -50,20 +50,28 @@ stop:
 	kubectl scale deployment cloudbeaver --replicas=0 -n openmetadata
 	kubectl scale deployment duckdb-server --replicas=0 -n openmetadata
 	kubectl scale deployment mongodb --replicas=0 -n openmetadata
+	@echo "Aguardando término das aplicações antes de desligar os bancos..."
+	@kubectl wait --namespace openmetadata --for=delete pod -l app.kubernetes.io/name=openmetadata --timeout=30s || true
 	kubectl scale statefulset opensearch --replicas=0 -n openmetadata
 	kubectl scale statefulset postgresql --replicas=0 -n openmetadata
 	@echo "Ambiente pausado com sucesso!"
 
+pause: stop
+
 start:
-	@echo "Iniciando todos os serviços a partir do estado salvo..."
+	@echo "Iniciando bases de dados e dependências..."
 	kubectl scale statefulset postgresql --replicas=1 -n openmetadata
 	kubectl scale statefulset opensearch --replicas=1 -n openmetadata
-	kubectl scale deployment openmetadata --replicas=1 -n openmetadata
 	kubectl scale deployment mongodb --replicas=1 -n openmetadata
 	kubectl scale deployment duckdb-server --replicas=1 -n openmetadata
 	kubectl scale deployment cloudbeaver --replicas=1 -n openmetadata
+	@echo "Aguardando PostgreSQL e OpenSearch..."
+	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
+	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=opensearch --timeout=300s
+	@echo "Iniciando OpenMetadata Server..."
+	kubectl scale deployment openmetadata --replicas=1 -n openmetadata
 	@echo "Aguardando OpenMetadata estar pronto..."
-	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=300s
+	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=600s
 	@echo "=================================================="
 	@echo "Serviços prontos para uso:"
 	@echo "  - OpenMetadata UI: http://localhost"

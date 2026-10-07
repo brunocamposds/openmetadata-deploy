@@ -23,3 +23,9 @@ primary:
     limits:
       cpu: 1000m
       memory: 1024Mi
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
