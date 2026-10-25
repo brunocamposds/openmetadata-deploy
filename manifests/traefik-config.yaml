@@ -1,0 +1,32 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ports:
+      clickhouse-http:
+        port: 8123
+        exposedPort: 8123
+        protocol: TCP
+        expose:
+          default: true
+      clickhouse-tcp:
+        port: 9000
+        exposedPort: 9000
+        protocol: TCP
+        expose:
+          default: true
+      mongodb:
+        port: 27017
+        exposedPort: 27017
+        protocol: TCP
+        expose:
+          default: true
+      postgresql:
+        port: 5432
+        exposedPort: 5432
+        protocol: TCP
+        expose:
+          default: true

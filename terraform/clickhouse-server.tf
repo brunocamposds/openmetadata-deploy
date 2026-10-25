@@ -122,7 +122,7 @@ resource "kubernetes_service" "clickhouse_server_service" {
   }
 
   spec {
-    type = "LoadBalancer"
+    type = "ClusterIP"
 
     selector = {
       app = "clickhouse-server"

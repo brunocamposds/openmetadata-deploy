@@ -1,0 +1,74 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: openmetadata-web
+  namespace: openmetadata
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`openmetadata.local`) || Host(`localhost`) || PathPrefix(`/`)
+      kind: Rule
+      priority: 1
+      services:
+        - name: openmetadata
+          port: 8585
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: clickhouse-http
+  namespace: openmetadata
+spec:
+  entryPoints:
+    - clickhouse-http
+    - web
+  routes:
+    - match: Host(`clickhouse.local`) || PathPrefix(`/`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: clickhouse-server
+          port: 8123
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: clickhouse-tcp
+  namespace: openmetadata
+spec:
+  entryPoints:
+    - clickhouse-tcp
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: clickhouse-server
+          port: 9000
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: mongodb-tcp
+  namespace: openmetadata
+spec:
+  entryPoints:
+    - mongodb
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: mongodb
+          port: 27017
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: postgresql-tcp
+  namespace: openmetadata
+spec:
+  entryPoints:
+    - postgresql
+  routes:
+    - match: HostSNI(`*`)
+      services:
+        - name: postgresql
+          port: 5432

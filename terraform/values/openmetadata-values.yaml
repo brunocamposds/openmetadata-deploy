@@ -37,7 +37,7 @@ resources:
     memory: 2048Mi
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 8585
 
 startupProbe:

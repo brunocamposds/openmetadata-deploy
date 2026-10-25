@@ -11,11 +11,12 @@ Antes de iniciar, certifique-se de que o cluster local está ativo:
 make status
 ```
 
-Abra os seguintes painéis no seu navegador:
-- **OpenMetadata UI:** [http://localhost](http://localhost) (ou [http://localhost:8585](http://localhost:8585))
+Abra os seguintes painéis / ferramentas:
+- **OpenMetadata UI:** [http://openmetadata.local](http://openmetadata.local) (ou [http://localhost:8585](http://localhost:8585) via `make port-forward`)
   - *Credenciais:* `admin@open-metadata.org` / `admin`
-- **CloudBeaver (ClickHouse Web UI):** [http://localhost:8978](http://localhost:8978)
-- **MongoDB Compass (opcional):** `mongodb://localhost:27017`
+- **DBeaver (ClickHouse SQL):** Host `clickhouse.local` (Porta 80) ou `localhost:8123` (via `make port-forward`)
+  - *Credenciais:* `clickhouse_user` / `clickhouse_password` (Database: `investments`)
+- **MongoDB Compass:** `mongodb://localhost:27017` (via `make port-forward`) ou Host `mongodb.local`
 
 ---
 
@@ -126,8 +127,8 @@ make job-logs-derivado
 ```
 
 **O que demonstrar nos painéis:**
-1. **No CloudBeaver ([http://localhost:8978](http://localhost:8978)):**
-   - Abra a conexão `ClickHouse Server`.
+1. **No DBeaver (ou terminal ClickHouse):**
+   - Conecte ao ClickHouse via Ingress (`clickhouse.local:80`) ou via túnel `localhost:8123` (`make port-forward`).
    - Navegue pelos schemas `cdb`, `cra` e `renda_fixa`.
    - Execute uma query SQL mostrando as posições consolidadas na Gold:
      ```sql

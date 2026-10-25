@@ -96,7 +96,7 @@ resource "helm_release" "opensearch" {
 # Release Helm: OpenMetadata Server (pacote local)
 resource "helm_release" "openmetadata" {
   name      = "openmetadata"
-  chart     = "${path.module}/charts/openmetadata-2.0.2.tgz"
+  chart     = "${path.module}/charts/openmetadata-${var.openmetadata_chart_version}.tgz"
   namespace = kubernetes_namespace.om_namespace.metadata[0].name
   timeout   = 900
   wait      = false

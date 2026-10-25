@@ -96,13 +96,15 @@ As seguintes melhorias foram incorporadas no script central [`scripts/deploy_dat
 
 ---
 
-### 2.4 Interface Web ClickHouse (CloudBeaver)
-- [x] **Configuração e Homologação do CloudBeaver para ClickHouse**:
-  - Configuração do ConfigMap `cloudbeaver-config` com permissões pré-definidas (`data-sources-permissions.json`), `initial-data.conf` e `initial-data-sources.conf`.
-  - Driver nativo ClickHouse JDBC (`clickhouse_jdbc`) configurado para `jdbc:clickhouse://clickhouse-server:8123/investments`.
-  - Habilitação de acesso anônimo compartilhado via `CLOUDBEAVER_APP_GRANT_CONNECTIONS_ACCESS_TO_ANONYMOUS_TEAM="true"` e `anonymousAccessEnabled: true`.
-  - Provisionamento determinístico via `init_container` (`init-cloudbeaver-config`) para persistência no PVC.
-  - Conexão pré-configurada ao `ClickHouse Server` em `http://localhost:8978`.
+### 2.4 Acesso a Dados e Ingress (ClickHouse & MongoDB)
+- [x] **Exposição via Traefik Ingress e Ferramentas Locais (DBeaver / Compass)**:
+  - Remoção do CloudBeaver em favor de ferramentas locais diretas (DBeaver Desktop e MongoDB Compass).
+  - Rotas de Ingress dedicadas configuradas em `manifests/openmetadata-ingress.yaml`:
+    - `http://clickhouse.local` ➔ ClickHouse Server HTTP (:8123)
+    - `http://mongodb.local` ➔ MongoDB Serving Layer (:27017)
+    - `http://openmetadata.local` ➔ OpenMetadata Server (:8585)
+  - Isolamento de regras de `localhost` na porta 80 do Ingress para evitar conflitos com outros workloads locais do cluster.
+  - Comando `make port-forward` consolidado para abrir simultaneamente os túneis locais: `:8585` (OM), `:8123` (ClickHouse / DBeaver) e `:27017` (MongoDB Compass).
 
 ---
 

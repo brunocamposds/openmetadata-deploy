@@ -7,11 +7,11 @@ help:
 	@echo "  --- Infraestrutura & Cluster ---"
 	@echo "  make init             - Inicializa o Terraform e providers"
 	@echo "  make plan             - Gera plano de execução do Terraform"
-	@echo "  make apply            - Aplica todos os recursos (OpenMetadata, ClickHouse Server, CloudBeaver, MongoDB)"
+	@echo "  make apply            - Aplica todos os recursos (OpenMetadata, ClickHouse Server, MongoDB)"
 	@echo "  make status           - Verifica os pods, serviços, PVCs e Ingress no namespace openmetadata"
 	@echo "  make stop             - Hiberna os serviços (0% CPU/RAM) preservando os dados"
 	@echo "  make start            - Retoma todos os serviços rapidamente com dados salvos"
-	@echo "  make port-forward     - Abre túnel para acessar http://localhost:8585 no navegador"
+	@echo "  make port-forward     - Abre túneis para OpenMetadata (:8585), ClickHouse (:8123) e MongoDB (:27017)"
 	@echo "  make reset            - Limpa todo o catálogo do OM, ClickHouse e MongoDB (volta ao estado recém-instalado)"
 	@echo "  make destroy          - Remove os recursos criados pelo Terraform"
 	@echo ""
@@ -38,16 +38,18 @@ plan:
 	cd terraform && terraform plan
 
 apply:
+	kubectl apply -f manifests/traefik-config.yaml
 	cd terraform && terraform apply -auto-approve
-	kubectl apply -f manifests/openmetadata-ingress.yaml
+	kubectl apply -f manifests/traefik-routes.yaml
+
+deploy: apply
 
 status:
-	kubectl get pods,svc,pvc,ingress -n openmetadata
+	kubectl get pods,svc,pvc,ingressroutes,ingressroutetcps -n openmetadata
 
 stop:
 	@echo "Pausando todos os serviços (liberando RAM/CPU sem perder dados)..."
 	kubectl scale deployment openmetadata --replicas=0 -n openmetadata
-	kubectl scale deployment cloudbeaver --replicas=0 -n openmetadata
 	kubectl scale deployment clickhouse-server --replicas=0 -n openmetadata
 	kubectl scale deployment mongodb --replicas=0 -n openmetadata
 	@echo "Aguardando término das aplicações antes de desligar os bancos..."
@@ -64,31 +66,45 @@ start:
 	kubectl scale statefulset opensearch --replicas=1 -n openmetadata
 	kubectl scale deployment mongodb --replicas=1 -n openmetadata
 	kubectl scale deployment clickhouse-server --replicas=1 -n openmetadata
-	kubectl scale deployment cloudbeaver --replicas=1 -n openmetadata
 	@echo "Aguardando PostgreSQL e OpenSearch..."
 	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
 	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=opensearch --timeout=300s
 	@echo "Iniciando OpenMetadata Server..."
 	kubectl scale deployment openmetadata --replicas=1 -n openmetadata
-	@echo "Aguardando OpenMetadata estar pronto..."
-	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=600s
+	@echo "Aguardando OpenMetadata estar pronto (execução de migrações e índices de busca no OpenSearch pode levar até 15 minutos)..."
+	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=1800s
 	@echo "=================================================="
-	@echo "Serviços prontos para uso:"
-	@echo "  - OpenMetadata UI:   http://localhost"
-	@echo "  - ClickHouse Web UI: http://localhost:8978"
-	@echo "  - MongoDB Compass:   mongodb://localhost:27017"
-	@echo "  - ClickHouse Server: http://localhost:8123"
+	@echo "Serviços prontos para uso via Traefik (SEM necessidade de port-forward):"
+	@echo "  - OpenMetadata UI & REST API:"
+	@echo "      • http://localhost/ (Porta 80 padrão Traefik)"
+	@echo "      • http://localhost:8585"
+	@echo "      • http://openmetadata.local (via hosts)"
+	@echo "  - ClickHouse Server:"
+	@echo "      • HTTP / REST: http://localhost:8123 ou http://clickhouse.local"
+	@echo "      • Native TCP:  localhost:9000 (DBeaver / Clients)"
+	@echo "  - MongoDB (Serving Layer):"
+	@echo "      • Protocolo Binário TCP: mongodb://localhost:27017 (Compass / Drivers)"
+	@echo "  - PostgreSQL (Catálogo):"
+	@echo "      • PostgreSQL TCP: localhost:5432"
 	@echo "=================================================="
 
 port-forward:
-	@echo "Aguardando o pod do OpenMetadata estar totalmente inicializado (Running/Ready)..."
-	@kubectl wait --namespace openmetadata --for=condition=ready pod -l app.kubernetes.io/name=openmetadata --timeout=1800s
+	@echo "AVISO: O cluster utiliza Traefik como Ingress/Proxy L4-L7 e todos os serviços"
+	@echo "já estão expostos diretamente em localhost sem necessidade deste comando!"
 	@echo "=================================================="
-	@echo "Acesse no navegador: http://localhost:8585"
-	@echo "Credenciais de acesso inicial:"
-	@echo "  Email: admin@open-metadata.org"
-	@echo "  Senha: admin"
+	@echo "Túneis locais adicionais (Ctrl+C para encerrar):"
+	@echo "  - OpenMetadata UI:   http://localhost:8585"
+	@echo "  - ClickHouse Server: http://localhost:8123 (DBeaver)"
+	@echo "  - MongoDB Compass:   mongodb://localhost:27017"
+	@echo "Credenciais:"
+	@echo "  - OM: admin@open-metadata.org / admin"
+	@echo "  - ClickHouse: clickhouse_user / clickhouse_password (Database: investments)"
 	@echo "=================================================="
+	@trap 'kill 0' EXIT; \
+	kubectl port-forward svc/openmetadata 8585:8585 -n openmetadata & \
+	kubectl port-forward svc/clickhouse-server 8123:8123 -n openmetadata & \
+	kubectl port-forward svc/mongodb 27017:27017 -n openmetadata & \
+	wait
 
 deploy-cdb:
 	./scripts/deploy_repo_product.sh repos/sist-cdb

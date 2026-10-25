@@ -8,7 +8,9 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-  # Acesso via domínio customizado
+  # ============================================================================
+  # 1. OpenMetadata UI & REST API
+  # ============================================================================
   - host: openmetadata.local
     http:
       paths:
@@ -19,24 +21,33 @@ spec:
             name: openmetadata
             port:
               number: 8585
-  # Acesso direto via localhost na porta 80
-  - host: localhost
+
+  # ============================================================================
+  # 2. ClickHouse Server (HTTP REST / JDBC para DBeaver)
+  # Permite conexões do DBeaver e scripts HTTP via http://clickhouse.local
+  # ============================================================================
+  - host: clickhouse.local
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: openmetadata
+            name: clickhouse-server
             port:
-              number: 8585
-  # Regra catch-all (acesso direto por IP ou outros hostnames)
-  - http:
+              number: 8123
+
+  # ============================================================================
+  # 3. MongoDB Serving Layer (Compass / Drivers)
+  # Roteamento via Ingress para http://mongodb.local
+  # ============================================================================
+  - host: mongodb.local
+    http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: openmetadata
+            name: mongodb
             port:
-              number: 8585
+              number: 27017

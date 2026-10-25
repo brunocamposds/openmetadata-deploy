@@ -96,7 +96,7 @@ resource "kubernetes_service" "mongodb_service" {
   }
 
   spec {
-    type = "LoadBalancer"
+    type = "ClusterIP"
 
     selector = {
       app = "mongodb"

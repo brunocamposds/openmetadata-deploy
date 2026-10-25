@@ -314,6 +314,7 @@ def resolve_om_url(explicit_url: str = None) -> str:
     if env_url:
         return env_url
     for candidate in [
+        "http://openmetadata.local",
         "http://localhost",
         "http://localhost:8585",
         "http://openmetadata.openmetadata.svc.cluster.local:8585",

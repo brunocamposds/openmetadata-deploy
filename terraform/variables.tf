@@ -59,5 +59,5 @@ variable "opensearch_heap_size" {
 variable "openmetadata_chart_version" {
   description = "Versão do Helm chart do OpenMetadata"
   type        = string
-  default     = "2.0.2"
+  default     = "2.0.6"
 }

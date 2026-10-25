@@ -19,6 +19,7 @@ limpo de 'recém-instalado':
 import sys
 import os
 import base64
+import time
 import requests
 import psycopg2
 
@@ -33,6 +34,7 @@ RESET = "\033[0m"
 def get_om_client():
     om_candidates = [
         os.getenv("OPENMETADATA_URL", "").rstrip("/"),
+        "http://openmetadata.local/api",
         "http://localhost:8585/api",
         "http://localhost/api",
         "http://openmetadata.openmetadata.svc.cluster.local:8585/api"
@@ -42,7 +44,7 @@ def get_om_client():
         if not cand:
             continue
         try:
-            r = requests.get(f"{cand}/v1/system/version", timeout=3)
+            r = requests.get(f"{cand}/v1/system/version", timeout=5)
             if r.status_code == 200:
                 base_url = cand
                 break
@@ -57,12 +59,24 @@ def get_om_client():
     password = os.getenv("OPENMETADATA_ADMIN_PASSWORD", "admin")
     b64_pass = base64.b64encode(password.encode()).decode()
 
-    login_resp = requests.post(f"{base_url}/v1/users/login", json={"email": email, "password": b64_pass}, timeout=10)
-    if login_resp.status_code != 200:
-        print(f"{RED}Erro de autenticação no OpenMetadata ({login_resp.status_code}): {login_resp.text}{RESET}")
+    token = None
+    for attempt in range(1, 4):
+        try:
+            login_resp = requests.post(f"{base_url}/v1/users/login", json={"email": email, "password": b64_pass}, timeout=30)
+            if login_resp.status_code == 200:
+                token = login_resp.json().get("accessToken")
+                break
+            else:
+                print(f"  {YELLOW}Aviso de autenticação (tentativa {attempt}/3): código {login_resp.status_code}. Retentando...{RESET}")
+                time.sleep(2)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            print(f"  {YELLOW}Aviso: latência na API do OpenMetadata (tentativa {attempt}/3). Retentando...{RESET}")
+            time.sleep(3)
+
+    if not token:
+        print(f"{RED}Erro: Falha na autenticação com OpenMetadata após 3 tentativas.{RESET}")
         sys.exit(1)
 
-    token = login_resp.json()["accessToken"]
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -209,7 +223,7 @@ def reset_clickhouse_server():
     if not connected:
         import subprocess
         try:
-            cmd = "kubectl exec -n openmetadata deployment/clickhouse-server -- clickhouse-client --user clickhouse_user --password clickhouse_password --query 'DROP DATABASE IF EXISTS cdb; DROP DATABASE IF EXISTS cra; DROP DATABASE IF EXISTS renda_fixa;'"
+            cmd = "kubectl exec -n openmetadata deployment/clickhouse-server -- clickhouse-client --user clickhouse_user --password clickhouse_password --multiquery --query 'DROP DATABASE IF EXISTS cdb; DROP DATABASE IF EXISTS cra; DROP DATABASE IF EXISTS renda_fixa;'"
             subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"  {GREEN}✔ Databases eliminados no ClickHouse Server via kubectl exec.{RESET}")
         except Exception as e:

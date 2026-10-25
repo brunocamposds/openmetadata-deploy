@@ -27,3 +27,9 @@ config:
 
 securityConfig:
   enabled: false
+
+extraEnvs:
+  - name: DISABLE_SECURITY_PLUGIN
+    value: "true"
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    value: "Admin123!@#"

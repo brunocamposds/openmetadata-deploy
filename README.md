@@ -10,12 +10,11 @@ Inclui infraestrutura como código (Terraform), catálogo de metadados, busca di
 
 O ambiente é provisionado via Terraform em namespace isolado no Kubernetes (`openmetadata`):
 
-* **OpenMetadata Server (v2.0.2)**: Aplicação web e REST API.
+* **OpenMetadata Server (v2.0.6)**: Aplicação web e REST API.
 * **PostgreSQL (18.x)**: Armazenamento relacional de metadados estruturados, usuários, roles e entidades.
 * **OpenSearch (2.x)**: Mecanismo de busca e indexação textual/vetorial dos metadados.
-* **ClickHouse Server (24.x)**: Banco colunar analítico de alta performance nativamente integrado ao OpenMetadata (`serviceType: Clickhouse`).
-* **CloudBeaver Web UI**: Interface visual web para consultas SQL analíticas no ClickHouse (`http://localhost:8978`).
-* **MongoDB (7.x)**: Serving Store operacional para canais digitais (`mongodb://localhost:27017`).
+* **ClickHouse Server (24.x)**: Banco colunar analítico de alta performance nativamente integrado ao OpenMetadata (`serviceType: Clickhouse`), acessível via DBeaver/JDBC e Ingress (`http://clickhouse.local`).
+* **MongoDB (7.x)**: Serving Store operacional para canais digitais, acessível via MongoDB Compass e Ingress (`http://mongodb.local`).
 * **DataOps Pipeline**: Scripts de seed e automação de Data Products, contratos e linhagem ponta a ponta.
 
 ---
@@ -38,21 +37,34 @@ Todos os comandos de automação estão consolidados no `Makefile`:
 make init
 make apply
 ```
-> O provisionamento executa a criação do PostgreSQL, OpenSearch, ClickHouse Server, CloudBeaver, MongoDB e do OpenMetadata Server.
+> O provisionamento executa a criação do PostgreSQL, OpenSearch, ClickHouse Server, MongoDB e do OpenMetadata Server.
 
 ### 2. Verificar o status dos componentes
 ```bash
 make status
 ```
 
-### 3. Acessar a interface Web
+### 3. Acessar os Serviços (Web & Ferramentas Locais via Traefik)
 
-Graças ao Ingress integrado com o **Traefik**, os serviços podem ser acessados diretamente:
-* **OpenMetadata UI**: [http://localhost](http://localhost) (ou [http://localhost:8585](http://localhost:8585))
-* **ClickHouse Web UI (CloudBeaver)**: [http://localhost:8978](http://localhost:8978)
-* **MongoDB Compass**: `mongodb://localhost:27017`
+> **Sem Port-Forwarding**: Todos os serviços são roteados e expostos diretamente pelo **Traefik** (Ingress / Proxy L4-L7) nas portas locais do host. Você não precisa executar comandos de `kubectl port-forward`.
 
-#### Credenciais de Acesso Inicial:
+#### Acesso Direto (localhost):
+* **OpenMetadata UI & API**: [http://localhost/](http://localhost/) (Porta 80 padrão Traefik) ou [http://localhost:8585](http://localhost:8585)
+* **ClickHouse HTTP (DBeaver / REST)**: `http://localhost:8123`
+* **ClickHouse Native TCP (DBeaver / Clients)**: `localhost:9000`
+* **MongoDB Compass / Drivers**: `mongodb://localhost:27017`
+* **PostgreSQL (Catálogo OM)**: `localhost:5432`
+
+#### Acesso via Hostnames Traefik (Porta 80):
+Adicione os domínios locais no arquivo `C:\Windows\System32\drivers\etc\hosts`:
+```text
+127.0.0.1 openmetadata.local clickhouse.local mongodb.local
+```
+* **OpenMetadata UI**: [http://openmetadata.local](http://openmetadata.local)
+* **ClickHouse Server**: [http://clickhouse.local](http://clickhouse.local)
+* **MongoDB Serving**: `mongodb.local:27017`
+
+#### Credenciais de Acesso:
 * **OpenMetadata:** `admin@open-metadata.org` / `admin`
 * **ClickHouse:** `clickhouse_user` / `clickhouse_password` (Database: `investments`)
 
