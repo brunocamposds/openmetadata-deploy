@@ -135,7 +135,7 @@ def reset_openmetadata_catalog(base_url, headers):
             pass
 
     # 5. Deletar Glossários de Negócio
-    target_glossaries = ["Investimentos"]
+    target_glossaries = ["Investimentos", "Cadastro"]
     for gloss in target_glossaries:
         try:
             g = requests.get(f"{base_url}/v1/glossaries/name/{gloss}", headers=headers, timeout=10).json()
@@ -153,7 +153,7 @@ def reset_openmetadata_catalog(base_url, headers):
         for d in domains:
             d_name = d.get("name")
             d_id = d.get("id")
-            if d_name in ("Investimentos", "EmissoesBancarias", "Securitizacao", "RendaFixa"):
+            if d_name in ("Investimentos", "EmissoesBancarias", "Securitizacao", "RendaFixa", "Cadastro"):
                 r = requests.delete(f"{base_url}/v1/domains/{d_id}?recursive=true&hardDelete=true", headers=headers, timeout=15)
                 if r.status_code in (200, 204):
                     print(f"  {GREEN}✔ Domínio removido:{RESET} {d_name}")
@@ -161,7 +161,7 @@ def reset_openmetadata_catalog(base_url, headers):
         print(f"  {YELLOW}Aviso ao remover Domínios: {e}{RESET}")
 
     # 7. Deletar Squads / Times Customizados
-    target_teams = ["squad-cdb", "squad-cra", "squad-derivados"]
+    target_teams = ["squad-cdb", "squad-cra", "squad-derivados", "squad-mdm"]
     for t_name in target_teams:
         try:
             t = requests.get(f"{base_url}/v1/teams/name/{t_name}", headers=headers, timeout=10).json()
@@ -207,7 +207,7 @@ def reset_clickhouse_server():
     connected = False
     for ep in endpoints:
         try:
-            for db in ["cdb", "cra", "renda_fixa"]:
+            for db in ["cdb", "cra", "renda_fixa", "cadastro"]:
                 requests.post(
                     f"{ep}/",
                     data=f"DROP DATABASE IF EXISTS {db};",
@@ -223,7 +223,7 @@ def reset_clickhouse_server():
     if not connected:
         import subprocess
         try:
-            cmd = "kubectl exec -n openmetadata deployment/clickhouse-server -- clickhouse-client --user clickhouse_user --password clickhouse_password --multiquery --query 'DROP DATABASE IF EXISTS cdb; DROP DATABASE IF EXISTS cra; DROP DATABASE IF EXISTS renda_fixa;'"
+            cmd = "kubectl exec -n openmetadata deployment/clickhouse-server -- clickhouse-client --user clickhouse_user --password clickhouse_password --multiquery --query 'DROP DATABASE IF EXISTS cdb; DROP DATABASE IF EXISTS cra; DROP DATABASE IF EXISTS renda_fixa; DROP DATABASE IF EXISTS cadastro;'"
             subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(f"  {GREEN}✔ Databases eliminados no ClickHouse Server via kubectl exec.{RESET}")
         except Exception as e:
@@ -248,7 +248,7 @@ def clean_k8s_jobs():
     print(f"\n{BOLD}{CYAN}>>> [4/5] Removendo Jobs e Pods Concluídos no K3s...{RESET}")
     import subprocess
     try:
-        cmd = "kubectl delete job pipeline-cdb pipeline-cra pipeline-renda-fixa -n openmetadata --ignore-not-found=true"
+        cmd = "kubectl delete job pipeline-cdb pipeline-cra pipeline-renda-fixa pipeline-cadastro -n openmetadata --ignore-not-found=true"
         subprocess.run(cmd, shell=True, check=True)
         print(f"  {GREEN}✔ Jobs de pipelines removidos do namespace openmetadata.{RESET}")
     except Exception as e:

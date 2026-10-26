@@ -16,17 +16,20 @@ help:
 	@echo "  make destroy          - Remove os recursos criados pelo Terraform"
 	@echo ""
 	@echo "  --- Governança as Code (Marketplace & Contratos no OpenMetadata) ---"
+	@echo "  make deploy-cadastro  - Registra o Data Product SIST_CADASTRO (MDM Clientes) no OpenMetadata"
 	@echo "  make deploy-cdb       - Registra o Data Product SIST_CDB no OpenMetadata"
 	@echo "  make deploy-cra       - Registra o Data Product SIST_CRA no OpenMetadata"
 	@echo "  make deploy-derivado  - Registra o Data Product RENDA_FIXA_DERIVADO no OpenMetadata"
-	@echo "  make deploy-all       - Executa o deploy dos 3 produtos de dados em sequência"
+	@echo "  make deploy-all       - Executa o deploy dos 4 produtos de dados em sequência (Etapa 0 -> Etapa 1)"
 	@echo ""
 	@echo "  --- Pipelines de Dados (Execução 100% via Jobs no K3s) ---"
 	@echo "  make build-runner     - Constrói a imagem duckdb-pipeline-runner:latest para os jobs"
+	@echo "  make job-cadastro     - Dispara o Job K3s do SIST_CADASTRO (MDM Clientes -> ClickHouse -> DQ)"
 	@echo "  make job-cdb          - Dispara o Job K3s do SIST_CDB (CSV -> Bronze -> Silver -> DQ)"
 	@echo "  make job-cra          - Dispara o Job K3s do SIST_CRA (CSV -> Bronze -> Silver -> DQ)"
 	@echo "  make job-derivado     - Dispara o Job K3s de RENDA_FIXA_DERIVADO (Consolidação -> Gold -> Mongo -> DQ)"
 	@echo "  make job-status       - Lista os Jobs e Pods de execução no cluster"
+	@echo "  make job-logs-cadastro- Exibe os logs do Job de Cadastro MDM"
 	@echo "  make job-logs-cdb     - Exibe os logs do Job do SIST_CDB"
 	@echo "  make job-logs-cra     - Exibe os logs do Job do SIST_CRA"
 	@echo "  make job-logs-derivado- Exibe os logs do Job de Renda Fixa Derivado"
@@ -106,6 +109,9 @@ port-forward:
 	kubectl port-forward svc/mongodb 27017:27017 -n openmetadata & \
 	wait
 
+deploy-cadastro:
+	./scripts/deploy_repo_product.sh repos/sist-cadastro
+
 deploy-cdb:
 	./scripts/deploy_repo_product.sh repos/sist-cdb
 
@@ -115,7 +121,10 @@ deploy-cra:
 deploy-derivado:
 	./scripts/deploy_repo_product.sh repos/renda-fixa-derivado
 
-deploy-all: deploy-cdb deploy-cra deploy-derivado
+deploy-all: deploy-cadastro deploy-cdb deploy-cra deploy-derivado
+
+approve-cadastro:
+	./scripts/approve_repo_product.sh repos/sist-cadastro
 
 approve-cdb:
 	./scripts/approve_repo_product.sh repos/sist-cdb
@@ -126,10 +135,15 @@ approve-cra:
 approve-derivado:
 	./scripts/approve_repo_product.sh repos/renda-fixa-derivado
 
-approve-all: approve-cdb approve-cra approve-derivado
+approve-all: approve-cadastro approve-cdb approve-cra approve-derivado
 
 build-runner:
 	docker build -t pipeline-runner:latest -t duckdb-pipeline-runner:latest docker/pipeline-runner
+
+job-cadastro:
+	@echo "Disparando Job K3s: SIST_CADASTRO (MDM Clientes)..."
+	kubectl delete job pipeline-cadastro -n openmetadata --ignore-not-found=true
+	kubectl apply -f repos/sist-cadastro/k8s/job-cadastro.yaml
 
 job-cdb:
 	@echo "Disparando Job K3s: SIST_CDB..."
@@ -147,7 +161,10 @@ job-derivado:
 	kubectl apply -f repos/renda-fixa-derivado/k8s/job-renda-fixa.yaml
 
 job-status:
-	kubectl get jobs,pods -l 'app in (pipeline-cdb, pipeline-cra, pipeline-renda-fixa)' -n openmetadata
+	kubectl get jobs,pods -l 'app in (pipeline-cadastro, pipeline-cdb, pipeline-cra, pipeline-renda-fixa)' -n openmetadata
+
+job-logs-cadastro:
+	kubectl logs -l app=pipeline-cadastro -n openmetadata --tail=50 -f
 
 job-logs-cdb:
 	kubectl logs -l app=pipeline-cdb -n openmetadata --tail=50 -f

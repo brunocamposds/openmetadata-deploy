@@ -1,0 +1,106 @@
+# ==============================================================================
+# Open Data Product Standard (ODPS) - v4.1
+# Produto de Dados: SIST_CADASTRO (Source-Aligned / Master Data Management)
+# ==============================================================================
+schema: "https://opendataproducts.org/v4.1/schema/odps.json"
+version: "4.1"
+
+# Informações de Negócio e Domínio
+domain: "Cadastro"
+subDomain: "Cadastro de Clientes (MDM)"
+
+# Especificação Oficial do Produto de Dados (ODPS v4.1)
+product:
+  details:
+    en:
+      name: "SIST_CADASTRO"
+      productID: "SIST_CADASTRO"
+      version: "1.0.0"
+      visibility: "public"
+      status: "development"
+      type: "raw data"
+      description: >
+        Produto de dados Master Data Management (MDM) de Clientes corporativo.
+        Responsável pela resolução de identidade, geração da chave universal de cliente
+        (id_cliente_global) e manutenção da tabela oficial de De/Para cadastral entre
+        os sistemas legados institucionais (incluindo o canal de Investimentos) e o
+        cadastro mestre regulatório.
+      categories:
+        - "Cadastro"
+        - "Clientes"
+        - "MDM"
+        - "Master Data"
+        - "DePara"
+
+  dataHolder:
+    legalName: "Squad Master Data Management (MDM)"
+    businessDomain: "Cadastro"
+    description: "Time proprietário e responsável pela governança cadastral e identidade única de clientes da instituição."
+    contactEmail: "squad-mdm-clientes@banco.com.br"
+
+  productStrategy:
+    objectives:
+      - "Garantir chave única global e deduplicação de clientes para 100% da base institucional."
+      - "Fornecer tabela de De/Para auditada entre sistemas verticais e a chave mestre MDM."
+      - "Alimentar os produtos de dados de negócio (como SIST_CDB, SIST_CRA e RENDA_FIXA_DERIVADO) com conformidade semântica."
+
+# Responsabilidades e Times (Governança Interna)
+team:
+  id: "squad-mdm"
+  name: "Squad Master Data Management"
+  email: "squad-mdm-clientes@banco.com.br"
+  slackChannel: "#squad-mdm-data"
+  role: "Data Product Owner Team"
+
+owners:
+  - id: "marina.costa"
+    name: "Marina Costa"
+    email: "marina.costa@banco.com.br"
+    role: "Data Product Owner (MDM)"
+  - id: "rodrigo.santos"
+    name: "Rodrigo Santos"
+    email: "rodrigo.santos@banco.com.br"
+    role: "Lead Data Engineer"
+
+# Portas de Entrada (Input Ports - Sistema Transacional Core de Clientes / CRM)
+inputPorts:
+  - id: "inp-crm-core-replica"
+    name: "Replicação Transacional Core CRM & Cadastro"
+    type: "database-cdc"
+    sourceSystem: "SIST_CADASTRO_CORE_CRM"
+    technology: "PostgreSQL CDC / Debezium"
+    frequency: "streaming-realtime"
+    description: "Captura em tempo real de eventos de criação, atualização e encerramento cadastral de clientes."
+
+# Portas de Saída (Output Ports - Tabela Mestre no ClickHouse Server)
+outputPorts:
+  - id: "out-cadastro-clientes"
+    name: "Cadastro Mestre e De/Para de Clientes (MDM)"
+    type: "sql-table"
+    protocol: "native"
+    platform: "clickhouse"
+    format: "ClickHouse MergeTree"
+    storageLocation: "clickhouse-server:8123:investments.cadastro.clientes"
+    fullyQualifiedName: "investments.cadastro.clientes"
+    classification: "internal-restricted"
+    contract: "contracts/cadastro-clientes.odcs.yaml"
+    serviceLevelObjective:
+      availability: "99.9%"
+      latency: "D-0 tempo real / microbatch"
+      freshnessHours: 1
+
+# Contratos de Dados Associados (ODCS)
+contracts:
+  - id: "contract-cadastro-clientes"
+    specification: "ODCS-v3.1.0"
+    path: "contracts/cadastro-clientes.odcs.yaml"
+
+# Políticas de Governança, Retenção e Compliance
+governance:
+  classification: "Restrito"
+  compliance:
+    - "LGPD"
+    - "BACEN-Resolucao-4893"
+    - "KYC-AML"
+  retentionYears: 10
+  billingCostCenter: "CC-CORP-CADASTRO-20100"

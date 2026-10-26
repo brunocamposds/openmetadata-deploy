@@ -101,6 +101,46 @@ class OpenMetadataClient:
         return {}
 
 
+def normalize_models(raw_models):
+    """Normaliza models de ODCS tanto se for lista (v3.0.0) quanto dicionário (v3.1.0)."""
+    normalized = []
+    if isinstance(raw_models, list):
+        for m in raw_models:
+            t_name = m.get("table") or m.get("name", "")
+            cols = m.get("columns") or []
+            if isinstance(cols, dict):
+                cols = [{"name": k, **v} for k, v in cols.items()]
+            normalized.append({
+                "table": t_name,
+                "description": m.get("description", ""),
+                "columns": cols
+            })
+    elif isinstance(raw_models, dict):
+        for m_name, m_def in raw_models.items():
+            cols = []
+            raw_fields = m_def.get("fields") or m_def.get("columns") or {}
+            if isinstance(raw_fields, dict):
+                for f_name, f_def in raw_fields.items():
+                    cols.append({
+                        "name": f_name,
+                        "logicalType": f_def.get("type") or f_def.get("logicalType", "string"),
+                        "physicalType": f_def.get("physicalType") or (f_def.get("type", "STRING")).upper(),
+                        "primaryKey": f_def.get("primaryKey", False),
+                        "nullable": not f_def.get("required", False),
+                        "classification": f_def.get("classification"),
+                        "description": f_def.get("description", ""),
+                        "businessGlossaryTerm": f_def.get("businessGlossaryTerm")
+                    })
+            elif isinstance(raw_fields, list):
+                cols = raw_fields
+            normalized.append({
+                "table": m_name,
+                "description": m_def.get("description", ""),
+                "columns": cols
+            })
+    return normalized
+
+
 def build_om_odcs_yaml(odcs_data: dict, table_name: str, full_table_fqn: str, dp_name: str, domain_name: str, status: str = "active") -> str:
     om_odcs = {
         "apiVersion": "v3.0.0",
@@ -116,7 +156,7 @@ def build_om_odcs_yaml(odcs_data: dict, table_name: str, full_table_fqn: str, dp
         }
     }
     schema_objs = []
-    models = odcs_data.get("models", [])
+    models = normalize_models(odcs_data.get("models", []))
     for m in models:
         elements = []
         for col in m.get("columns", []):

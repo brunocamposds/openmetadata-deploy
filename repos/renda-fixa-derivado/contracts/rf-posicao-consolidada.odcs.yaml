@@ -46,8 +46,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "ID unificado do cliente."
-        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+        description: "ID do cliente investidor, unificado e resolvido através do produto mestre SIST_CADASTRO (MDM)."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "tp_produto_renda_fixa"
         logicalType: "string"

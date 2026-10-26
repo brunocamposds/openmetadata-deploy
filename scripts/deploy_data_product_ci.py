@@ -192,6 +192,46 @@ def get_layer_and_cert(table_name: str) -> tuple[str, str]:
         return ("Tier.Tier2", "Certification.Silver")
 
 
+def normalize_models(raw_models):
+    """Normaliza models de ODCS tanto se for lista (v3.0.0) quanto dicionário (v3.1.0)."""
+    normalized = []
+    if isinstance(raw_models, list):
+        for m in raw_models:
+            t_name = m.get("table") or m.get("name", "")
+            cols = m.get("columns") or []
+            if isinstance(cols, dict):
+                cols = [{"name": k, **v} for k, v in cols.items()]
+            normalized.append({
+                "table": t_name,
+                "description": m.get("description", ""),
+                "columns": cols
+            })
+    elif isinstance(raw_models, dict):
+        for m_name, m_def in raw_models.items():
+            cols = []
+            raw_fields = m_def.get("fields") or m_def.get("columns") or {}
+            if isinstance(raw_fields, dict):
+                for f_name, f_def in raw_fields.items():
+                    cols.append({
+                        "name": f_name,
+                        "logicalType": f_def.get("type") or f_def.get("logicalType", "string"),
+                        "physicalType": f_def.get("physicalType") or (f_def.get("type", "STRING")).upper(),
+                        "primaryKey": f_def.get("primaryKey", False),
+                        "nullable": not f_def.get("required", False),
+                        "classification": f_def.get("classification"),
+                        "description": f_def.get("description", ""),
+                        "businessGlossaryTerm": f_def.get("businessGlossaryTerm")
+                    })
+            elif isinstance(raw_fields, list):
+                cols = raw_fields
+            normalized.append({
+                "table": m_name,
+                "description": m_def.get("description", ""),
+                "columns": cols
+            })
+    return normalized
+
+
 def build_om_odcs_yaml(odcs_data: dict, table_name: str, full_table_fqn: str, dp_name: str, domain_name: str, status: str = "draft") -> str:
     """Converte o contrato ODCS para a especificação aceita pela API nativa /dataContracts/odcs/yaml do OpenMetadata."""
     om_odcs = {
@@ -208,7 +248,7 @@ def build_om_odcs_yaml(odcs_data: dict, table_name: str, full_table_fqn: str, dp
         }
     }
     schema_objs = []
-    models = odcs_data.get("models", [])
+    models = normalize_models(odcs_data.get("models", []))
     for m in models:
         elements = []
         for col in m.get("columns", []):
@@ -306,54 +346,81 @@ def humanize_glossary_term(name: str) -> str:
         "SaldoInvestidoTotal": "Saldo Investido Total",
         "TotalAportes": "Total de Aportes Financeiros",
         "TotalResgates": "Total de Resgates Financeiros",
+        "ClienteGlobal": "Chave Universal de Cliente (MDM)",
+        "DocumentoClienteHash": "Hash Criptográfico de CPF/CNPJ",
+        "NomeCliente": "Nome do Cliente / Razão Social",
+        "TipoPessoa": "Classificação Tipo de Pessoa (PF/PJ)",
+        "StatusCadastral": "Status Cadastral do Cliente",
+        "DataCadastro": "Data de Cadastro do Cliente",
     }
     if name in known:
         return known[name]
     return re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
 
 
-def provision_glossary_and_terms(client: OpenMetadataClient, repo_path: Path):
+def resolve_glossary_and_term(bg_term: str, default_glossary: str = "Investimentos"):
+    """Extrai o glossário correto ('Cadastro' ou 'Investimentos') e o termo final."""
+    parts = bg_term.split(".")
+    term_name = parts[-1]
+    first = parts[0].lower()
+    if first == "cadastro":
+        g_target = "Cadastro"
+    elif first in ("investimentos", "investments"):
+        g_target = "Investimentos"
+    elif len(parts) >= 2:
+        g_target = parts[0]
+    else:
+        g_target = default_glossary
+    return g_target, term_name
+
+
+def provision_glossary_and_terms(client: OpenMetadataClient, repo_path: Path, default_glossary: str = "Investimentos"):
     """
     Provisiona o Glossário de Negócio e seus Termos a partir dos contratos ODCS do repositório.
     Garante que os termos apareçam no menu 'Governar -> Glossários' do OpenMetadata.
     """
-    print(f"\n{BOLD}{CYAN}>>> [Etapa 3.1] Provisionando Glossário de Negócios e Termos de Governança...{RESET}")
-    glossary_name = "Investimentos"
-    glossary_payload = {
-        "name": glossary_name,
-        "displayName": "Glossário de Investimentos",
-        "description": "Glossário corporativo de termos conceituais, métricas e entidades de negócio para o domínio de Investimentos.",
-        "mutuallyExclusive": False
-    }
-    client.put("v1/glossaries", glossary_payload)
-    print(f"  {GREEN}✔ Glossário Corporativo: {glossary_name}{RESET}")
+    print(f"\n{BOLD}{CYAN}>>> [Etapa 3.1] Provisionando Glossários de Negócios e Termos de Governança...{RESET}")
+    
+    # Garantir glossários padrão
+    known_glossaries = {default_glossary, "Investimentos", "Cadastro"}
+    for g_name in known_glossaries:
+        glossary_payload = {
+            "name": g_name,
+            "displayName": f"Glossário de {g_name}",
+            "description": f"Glossário corporativo de termos conceituais, métricas e entidades de negócio para o domínio de {g_name}.",
+            "mutuallyExclusive": False
+        }
+        client.put("v1/glossaries", glossary_payload)
+        print(f"  {GREEN}✔ Glossário Corporativo: {g_name}{RESET}")
 
     terms_found = {}
     for contract_file in (repo_path / "contracts").glob("*.odcs.yaml"):
         try:
             with open(contract_file, "r", encoding="utf-8") as f:
                 y = yaml.safe_load(f)
-            for model in y.get("models", []):
+            models = normalize_models(y.get("models", []))
+            for model in models:
                 for col in model.get("columns", []):
                     bg_term = col.get("businessGlossaryTerm")
                     if bg_term:
-                        term_name = bg_term.split(".")[-1]
+                        g_target, term_name = resolve_glossary_and_term(bg_term, default_glossary)
                         desc = col.get("description", f"Termo de negócio {term_name} para {col.get('name')}.")
-                        if term_name not in terms_found:
-                            terms_found[term_name] = desc
+                        key = (g_target, term_name)
+                        if key not in terms_found:
+                            terms_found[key] = desc
         except Exception as e:
             print(f"  {YELLOW}Aviso ao ler {contract_file} para glossário: {e}{RESET}")
 
-    for term_name, desc in sorted(terms_found.items()):
+    for (g_target, term_name), desc in sorted(terms_found.items()):
         disp_name = humanize_glossary_term(term_name)
         term_payload = {
             "name": term_name,
             "displayName": disp_name,
             "description": desc,
-            "glossary": glossary_name
+            "glossary": g_target
         }
         client.put("v1/glossaryTerms", term_payload)
-        print(f"  {GREEN}✔ Termo de Glossário: {glossary_name}.{term_name} ({disp_name}){RESET}")
+        print(f"  {GREEN}✔ Termo de Glossário: {g_target}.{term_name} ({disp_name}){RESET}")
 
 
 def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
@@ -587,7 +654,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
             print(f"  {GREEN}✔ Sistema de Origem: {sys_id}.CORE_PROD.raw.{src_table_name}{RESET}")
 
     # 3.1 Provisionar Glossário Corporativo e Termos de Governança
-    provision_glossary_and_terms(client, repo_path)
+    provision_glossary_and_terms(client, repo_path, default_glossary=domain_name)
 
     # 4. Parse dos Contratos ODCS e Registro de Tabelas
     print(f"\n{BOLD}{CYAN}>>> [Etapa 4] Fazendo Parse dos Contratos ODCS e Registrando Tabelas...{RESET}")
@@ -612,7 +679,7 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
         with open(contract_file, "r", encoding="utf-8") as f:
             odcs = yaml.safe_load(f)
 
-        odcs_models = odcs.get("models", [])
+        odcs_models = normalize_models(odcs.get("models", []))
         for model in odcs_models:
             model_table_raw = model.get("table", "")
             # Determinar se a tabela pertence a ClickHouse ou MongoDB
@@ -659,9 +726,10 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
                 # Termo de glossário corporativo
                 bg_term = col.get("businessGlossaryTerm")
                 if bg_term:
-                    term_name = bg_term.split(".")[-1]
+                    g_target, term_name = resolve_glossary_and_term(bg_term, domain_name)
+                    tag_fqn = f"{g_target}.{term_name}"
                     col_tags.append({
-                        "tagFQN": f"Investimentos.{term_name}",
+                        "tagFQN": tag_fqn,
                         "source": "Glossary",
                         "labelType": "Manual",
                         "state": "Confirmed"
@@ -837,8 +905,8 @@ def deploy_repository_product(repo_path_str: str, client: OpenMetadataClient):
                             "state": "Confirmed"
                         })
                     if has_glossary:
-                        t_name = has_glossary.split(".")[-1]
-                        tag_fqn = f"Investimentos.{t_name}"
+                        g_target, term_name = resolve_glossary_and_term(has_glossary, domain_name)
+                        tag_fqn = f"{g_target}.{term_name}"
                         if tag_fqn not in existing_fqns:
                             new_tags.append({
                                 "tagFQN": tag_fqn,

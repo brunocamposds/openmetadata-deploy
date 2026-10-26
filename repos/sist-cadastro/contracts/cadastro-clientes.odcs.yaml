@@ -1,0 +1,88 @@
+# ==============================================================================
+# Open Data Contract Standard (ODCS) - v3.1.0
+# Dataset: investments.cadastro.clientes
+# ==============================================================================
+dataContractSpecification: "3.1.0"
+id: "odcs-cadastro-clientes"
+info:
+  title: "Contrato de Dados - Cadastro Unificado de Clientes (MDM)"
+  version: "1.0.0"
+  status: "active"
+  description: >
+    Contrato mestre de dados que estabelece o esquema canônico, garantias de qualidade
+    e De/Para universal entre identificadores legados setoriais e a chave única corporativa
+    de clientes gerenciada pelo Master Data Management (MDM).
+  owner: "squad-mdm"
+  contact:
+    name: "Marina Costa (Data Product Owner MDM)"
+    email: "marina.costa@banco.com.br"
+
+domain: "Cadastro"
+dataset: "clientes"
+quantumName: "SIST_CADASTRO"
+
+# Especificação do Schema
+models:
+  investments.cadastro.clientes:
+    description: "Tabela mestre contendo o cadastro deduplicado de clientes e De/Para de sistemas legados."
+    type: "table"
+    criticality: "high"
+    fields:
+      id_cliente_global:
+        type: "string"
+        primaryKey: true
+        required: true
+        unique: true
+        description: "Chave universal unificada do cliente no Master Data Management (MDM-CLI-XXXXX)."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
+
+      id_cliente_legado:
+        type: "string"
+        required: true
+        description: "Identificador setorial do cliente no sistema legado de investimentos (CLI-XXX)."
+        businessGlossaryTerm: "Investimentos.ClienteTitular"
+
+      cpf_cnpj_hash:
+        type: "string"
+        required: true
+        classification: "PII"
+        description: "Hash criptográfico SHA-256 do documento do cliente para junção segura e conformidade LGPD."
+        businessGlossaryTerm: "Cadastro.DocumentoClienteHash"
+
+      nome_cliente:
+        type: "string"
+        required: true
+        classification: "PII"
+        description: "Nome completo de pessoa física ou razão social de pessoa jurídica."
+        businessGlossaryTerm: "Cadastro.NomeCliente"
+
+      tipo_pessoa:
+        type: "string"
+        required: true
+        enum:
+          - "PF"
+          - "PJ"
+        description: "Classificação do titular entre Pessoa Física (PF) e Pessoa Jurídica (PJ)."
+        businessGlossaryTerm: "Cadastro.TipoPessoa"
+
+      status_cadastro:
+        type: "string"
+        required: true
+        enum:
+          - "ATIVO"
+          - "BLOQUEADO"
+          - "CANCELADO"
+        description: "Situação operacional e regulatória do cadastro do cliente junto à instituição."
+        businessGlossaryTerm: "Cadastro.StatusCadastral"
+
+      dt_cadastro:
+        type: "date"
+        required: true
+        description: "Data de homologação e abertura do cadastro inicial do cliente."
+        businessGlossaryTerm: "Cadastro.DataCadastro"
+
+servicelevels:
+  availability:
+    percentage: "99.9%"
+  retention:
+    period: "10 years"

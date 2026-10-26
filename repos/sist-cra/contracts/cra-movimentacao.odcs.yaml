@@ -54,7 +54,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "Identificador unificado do cliente."
+        description: "Identificador unificado do cliente. Vinculado à ontologia corporativa do SIST_CADASTRO."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "tp_movimentacao"
         logicalType: "string"

@@ -60,8 +60,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "Identificador do cliente investidor detentor das cotas/títulos."
-        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+        description: "Identificador do cliente investidor detentor das cotas/títulos. Amarrado à chave global MDM de clientes (SIST_CADASTRO)."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "cd_tipo_remuneracao"
         logicalType: "string"

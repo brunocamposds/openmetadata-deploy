@@ -54,7 +54,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "Identificador unificado do cliente solicitante/titular."
+        description: "Identificador setorial do cliente solicitante/titular. Mapeado para a chave única institucional em SIST_CADASTRO (cadastro.clientes)."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "tp_movimentacao"
         logicalType: "string"

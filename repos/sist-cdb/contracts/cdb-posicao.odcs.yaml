@@ -55,8 +55,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "Identificador unificado do cliente titular do investimento."
-        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+        description: "Código do cliente titular do investimento. Possui resolução de identidade e amarração com o produto de dados SIST_CADASTRO (chave mestre Cadastro.ClienteGlobal)."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "cd_tipo_cdb"
         logicalType: "string"

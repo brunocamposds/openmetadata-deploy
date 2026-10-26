@@ -41,8 +41,8 @@ models:
         physicalType: "STRING"
         nullable: false
         classification: "PII"
-        description: "ID do cliente indexado para busca pontual rápida (índice único)."
-        businessGlossaryTerm: "investments.glossary.ClienteTitular"
+        description: "ID do cliente indexado para busca pontual rápida no canal digital, amarrado à chave mestre SIST_CADASTRO."
+        businessGlossaryTerm: "Cadastro.ClienteGlobal"
 
       - name: "snapshotDate"
         logicalType: "date"
